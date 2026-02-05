@@ -44,12 +44,47 @@ export interface CreateAppointmentOutput {
   statusCode: number;
   reason?: string;
   appointment?: {
-    id: string;
-    startTime: string;
-    endTime: string;
-    status: AppointmentStatus;
-    expiresAt: Date;
+    appointmentId: string;
+    appointmentDate: string; // YYYY-MM-DD
+    appointmentStartTime: string; // HH:MM
+    appointmentEndTime: string; // HH:MM
+    ownerName: string;
+    ownerPhone: string;
+    petName: string;
+    petSize: string;
+    breedText: string | null;
+    servicesName: string[];
+    notes: string | null;
+    status: string;
   };
+}
+
+// ========== GET APPOINTMENT ==========
+export interface GetAppointmentOutput {
+  success: boolean;
+  statusCode: number;
+  appointment?: {
+    appointmentId: string;
+    appointmentDate: string; // YYYY-MM-DD
+    appointmentStartTime: string; // HH:MM
+    appointmentEndTime: string; // HH:MM
+    ownerName: string;
+    ownerPhone: string;
+    petName: string;
+    petSize: string;
+    breedText: string | null;
+    servicesName: string[];
+    notes: string | null;
+    status: string;
+  };
+  reason?: string;
+}
+
+// ========== CANCEL APPOINTMENT ==========
+export interface CancelAppointmentOutput {
+  success: boolean;
+  statusCode: number;
+  reason?: string;
 }
 
 export interface Scheduler {
@@ -60,4 +95,8 @@ export interface Scheduler {
   ): Promise<CreateAppointmentOutput>;
 
   getServicesIdByNames(names: string[]): Promise<string[]>;
+
+  getAppointment(appointmentId: string): Promise<GetAppointmentOutput>;
+
+  cancelAppointment(appointmentId: string): Promise<CancelAppointmentOutput>;
 }

@@ -5,6 +5,7 @@ import { AppointmentStatusAdapter } from '@infraestructure/adapters/appointment-
 import { ClosureStatusDto } from '@domain/dtos/scheduler.dto';
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { nowInLima } from '@shared/utils/date.util';
+import { generateAppointmentId } from '@shared/utils/appointment-id.util';
 
 export class SchedulerRepository {
   async isClosed(day: Date): Promise<ClosureStatusDto> {
@@ -182,8 +183,11 @@ export class SchedulerRepository {
         throw error;
       }
 
+      const appointmentId = generateAppointmentId();
+
       const appointment = await tx.appointment.create({
         data: {
+          id: appointmentId,
           date: input.day,
           startTime: input.startTime,
           endTime: input.endTime,
@@ -201,12 +205,14 @@ export class SchedulerRepository {
             create: input.serviceIds.map((serviceId) => ({ serviceId })),
           },
         },
-        select: {
-          id: true,
-          status: true,
-          startTime: true,
-          endTime: true,
-          expiresAt: true,
+        include: {
+          items: {
+            include: {
+              service: {
+                select: { name: true },
+              },
+            },
+          },
         },
       });
 
@@ -214,6 +220,31 @@ export class SchedulerRepository {
         ...appointment,
         status: AppointmentStatusAdapter.toDomain(appointment.status),
       };
+    });
+  }
+
+  async findAppointmentById(appointmentId: string) {
+    return prismaClient.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        items: {
+          include: {
+            service: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus
+  ) {
+    return prismaClient.appointment.update({
+      where: { id: appointmentId },
+      data: { status },
     });
   }
 }

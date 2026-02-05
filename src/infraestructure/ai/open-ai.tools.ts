@@ -32,7 +32,7 @@ export const OPEN_AI_TOOLS = [
     type: 'function',
     name: 'createAppointment',
     description:
-      'Crea una cita PENDING bloqueando el slot sugerido. La veterinaria confirmará luego.',
+      'Crea una cita PENDING bloqueando el slot sugerido. Retorna appointmentId y TODOS los detalles (fecha, hora, servicios, mascota). La veterinaria confirmará después. El sistema automáticamente valida que esté guardado en BD.',
     parameters: {
       type: 'object',
       properties: {
@@ -50,6 +50,45 @@ export const OPEN_AI_TOOLS = [
         },
       },
       required: ['ownerName', 'petName', 'petSize', 'breedText', 'notes'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'getAppointment',
+    description:
+      'Obtiene los detalles de una cita guardada usando su ID o consulta por ownerPhone. Devuelve toda la información de la cita (fecha, hora, servicios, mascota, estado).',
+    parameters: {
+      type: 'object',
+      properties: {
+        appointmentId: {
+          type: 'string',
+          description:
+            'ID único de la cita (si lo tienen de un agendamiento anterior)',
+        },
+      },
+      required: ['appointmentId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: 'function',
+    name: 'cancelAppointment',
+    description:
+      'Cancela una cita existente. Una vez cancelada, el usuario puede agendar una nueva. El estado cambia a CANCELLED.',
+    parameters: {
+      type: 'object',
+      properties: {
+        appointmentId: {
+          type: 'string',
+          description: 'ID único de la cita a cancelar (formato: apt_xxxxx)',
+        },
+        reason: {
+          type: 'string',
+          description: 'Motivo de la cancelación (opcional)',
+        },
+      },
+      required: ['appointmentId'],
       additionalProperties: false,
     },
   },

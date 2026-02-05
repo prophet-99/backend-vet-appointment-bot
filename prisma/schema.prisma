@@ -103,7 +103,7 @@ model DurationRule {
 }
 
 model Appointment {
-  id            String            @id @default(cuid())
+  id            String            @id // Generado en aplicación: apt_XXXXXXXX (ej: apt_089ddfe4)
   date          DateTime          // día normalizado
   startTime     String            @map("start_time") // "HH:MM"
   endTime       String            @map("end_time") // "HH:MM"

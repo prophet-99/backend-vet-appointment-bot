@@ -7,6 +7,8 @@ import {
   type CreateAppointmentOutput,
   type GetAvailabilityInput,
   type GetAvailabilityOutput,
+  type GetAppointmentOutput,
+  type CancelAppointmentOutput,
 } from '@domain/models/scheduler.model';
 import {
   APPOINTMENT_CONFIG,
@@ -256,10 +258,31 @@ export class SchedulerService implements Scheduler {
           expiresAt: this.computeExpiresAt(nowInLima()),
         });
 
+      const appointmentDate = DateTime.fromJSDate(
+        appointment.date ?? new Date(),
+        {
+          zone: APP_TIMEZONE,
+        }
+      ).toFormat('yyyy-MM-dd');
+
       return {
         success: true,
         statusCode: 201,
-        appointment,
+        appointment: {
+          appointmentId: appointment.id,
+          appointmentDate,
+          appointmentStartTime: appointment.startTime,
+          appointmentEndTime: appointment.endTime,
+          ownerName: appointment.ownerName,
+          ownerPhone: appointment.ownerPhone,
+          petName: appointment.petName,
+          petSize: appointment.size,
+          breedText: appointment.breedText ?? null,
+          servicesName:
+            appointment.items?.map((item) => item.service?.name) ?? [],
+          notes: appointment.notes ?? null,
+          status: appointment.status,
+        },
       };
     } catch (error: any) {
       if (error?.code === ErrorCodes.APPOINTMENT_SLOT_CONFLICT.code) {
@@ -278,5 +301,91 @@ export class SchedulerService implements Scheduler {
     const services = await this.schedulerRepository.getServiceIdsByNames(names);
 
     return services.map((s) => s.id);
+  }
+
+  async getAppointment(appointmentId: string): Promise<GetAppointmentOutput> {
+    try {
+      const appointment =
+        await this.schedulerRepository.findAppointmentById(appointmentId);
+
+      if (!appointment) {
+        return {
+          success: false,
+          statusCode: 404,
+          reason: 'Cita no encontrada',
+        };
+      }
+
+      const appointmentDate = DateTime.fromJSDate(appointment.date, {
+        zone: APP_TIMEZONE,
+      }).toFormat('yyyy-MM-dd');
+
+      return {
+        success: true,
+        statusCode: 200,
+        appointment: {
+          appointmentId: appointment.id,
+          appointmentDate,
+          appointmentStartTime: appointment.startTime,
+          appointmentEndTime: appointment.endTime,
+          ownerName: appointment.ownerName,
+          ownerPhone: appointment.ownerPhone,
+          petName: appointment.petName,
+          petSize: appointment.size,
+          breedText: appointment.breedText,
+          servicesName: appointment.items.map((item) => item.service.name),
+          notes: appointment.notes,
+          status: appointment.status,
+        },
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: 500,
+        reason: 'Error al obtener cita',
+      };
+    }
+  }
+
+  async cancelAppointment(
+    appointmentId: string
+  ): Promise<CancelAppointmentOutput> {
+    try {
+      const appointment =
+        await this.schedulerRepository.findAppointmentById(appointmentId);
+
+      if (!appointment) {
+        return {
+          success: false,
+          statusCode: 404,
+          reason: 'Cita no encontrada',
+        };
+      }
+
+      if (appointment.status === 'CANCELLED') {
+        return {
+          success: false,
+          statusCode: 400,
+          reason: 'Esta cita ya estaba cancelada',
+        };
+      }
+
+      // Cambiar estado a CANCELLED
+      await this.schedulerRepository.updateAppointmentStatus(
+        appointmentId,
+        'CANCELLED'
+      );
+
+      return {
+        success: true,
+        statusCode: 200,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: 500,
+        reason: 'Error al cancelar cita',
+      };
+    }
   }
 }

@@ -9,6 +9,7 @@ import type { AIProvider } from '@domain/models/ai-provider.model';
 import type { Scheduler } from '@domain/models/scheduler.model';
 import { wantsHuman } from '@shared/utils/text-analysis.util';
 import { nowInLima, nowInLimaISO } from '@shared/utils/date.util';
+import { patchBookingState } from '@shared/utils/state.util';
 import {
   APP_TIMEZONE,
   BOOKING_STORE_TTL_HOURS,
@@ -38,26 +39,6 @@ export class ConversationService {
     };
   }
 
-  // TODO: Refactor con patchBookingState de ai-provider.orchestrator.ts
-  private patchState(
-    base: BookingState,
-    patch?: Partial<BookingState>
-  ): BookingState {
-    if (!patch) return base;
-
-    const next = { ...base };
-    (Object.keys(patch) as (keyof BookingState)[]).forEach((key) => {
-      const value = patch[key];
-      if (value !== undefined) {
-        (next as Record<keyof BookingState, BookingState[keyof BookingState]>)[
-          key
-        ] = value as BookingState[keyof BookingState];
-      }
-    });
-
-    return next;
-  }
-
   private getUserPrompt(params: {
     bookingState: BookingState;
     userInput: string;
@@ -80,21 +61,6 @@ export class ConversationService {
       servicesName=${bookingState.servicesName?.join(',') ?? '-'}
     `.trim();
 
-    console.log(
-      `
-      [FECHA ACTUAL - PERU]
-      ${nowInLimaISO()}
-
-      [ESTADO ACTUAL]
-      ${stateSummary}
-
-      [MENSAJE DEL CLIENTE]
-      ${userInput}
-
-      [INSTRUCCION]
-      Responde siguiendo las reglas.
-    `.trim()
-    );
     return `
       [FECHA ACTUAL - PERU]
       ${nowInLimaISO()}
@@ -156,7 +122,7 @@ export class ConversationService {
     });
     const botReply = aiResponse.text.trim();
 
-    const mergedState = this.patchState(state, aiResponse.statePatch);
+    const mergedState = patchBookingState(state, aiResponse.statePatch);
     mergedState.lastUserText = params.userMessage;
     mergedState.lastBotText = botReply;
     mergedState.expiresAt = this.calculateBookingExpiration();

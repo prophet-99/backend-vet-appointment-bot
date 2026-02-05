@@ -8,7 +8,7 @@ export interface AIProvider {
 export interface AIPromptRequest {
   userPrompt: string;
   userPhoneNumber: string;
-  bookingState?: BookingState;
+  bookingState: BookingState;
   schedulerService: Scheduler;
 }
 
