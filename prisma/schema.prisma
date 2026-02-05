@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PetSize {
+  SMALL
+  MEDIUM
+  LARGE
+
+  @@map("pet_size")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+
+  @@map("appointment_status")
+}
+
+enum RuleType {
+  DAILY_SERVICE_LIMIT
+  DAILY_SIZE_LIMIT
+
+  @@map("rule_type")
+}
+
+model Service {
+  id        String   @id @default(cuid())
+  name      String   @unique              // "bano_simple", "bano_medicado", "corte", "vacuna"
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  durationRules DurationRule[]
+  businessRules BusinessRule[]
+  items         AppointmentItem[]
+
+  @@map("service")
+}
+
+model WorkShift {
+  id        String  @id @default(cuid())
+  dayOfWeek Int     @unique @map("day_of_week") // 1=Lun ... 6=Sab (para tu caso)
+  startTime String  @map("start_time") // "09:00"
+  endTime   String  @map("end_time") // "18:30"
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("work_shift")
+}
+
+model Closure {
+  id        String   @id @default(cuid())
+  date      DateTime @unique  // normalizado al día 00:00
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("closure")
+}
+
+model BusinessRule {
+  id          String    @id @default(cuid())
+
+  ruleType    RuleType  @map("rule_type")
+  serviceId   String?   @map("service_id")
+  size        PetSize?
+  maxPerDay   Int       @map("max_per_day")
+
+  enabled     Boolean   @default(true)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  service     Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  @@unique([ruleType, serviceId, size])
+  @@map("business_rule")
+}
+
+model DurationRule {
+  id        String  @id @default(cuid())
+  serviceId String  @map("service_id")
+
+  size      PetSize
+  minutes   Int
+
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, size])
+  @@index([serviceId, size])
+  @@map("duration_rule")
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  date          DateTime          // día normalizado
+  startTime     String            @map("start_time") // "HH:MM"
+  endTime       String            @map("end_time") // "HH:MM"
+  status        AppointmentStatus @default(PENDING)
+  expiresAt     DateTime          @map("expires_at")
+
+  ownerName     String            @map("owner_name")
+  ownerPhone    String            @map("owner_phone")
+  petName       String            @map("pet_name")
+  size          PetSize
+  breedText     String?           @map("breed_text")
+  notes         String?
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  items         AppointmentItem[]
+
+  @@index([date, status])
+  @@map("appointment")
+}
+
+model AppointmentItem {
+  id            String   @id @default(cuid())
+  appointmentId String   @map("appointment_id")
+  serviceId     String   @map("service_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  service     Service     @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([appointmentId, serviceId])
+  @@map("appointment_item")
+}
+
+model BookingState {
+  conversationId String    @id @map("conversation_id")
+  mode           String    // "BOOKING" | "HUMAN"
+  expiresAt      DateTime  @map("expires_at")
+  
+  // Campos opcionales del estado
+  lastUserText         String?   @map("last_user_text")
+  lastBotText          String?   @map("last_bot_text")
+  preferredDate        String?   @map("preferred_date") // ISO string (YYYY-MM-DD)
+  preferredTime        String?   @map("preferred_time") // "HH:MM"
+  appointmentDate      String?   @map("appointment_date") // ISO string (YYYY-MM-DD)
+  appointmentStartTime String?   @map("appointment_start_time") // "HH:MM"
+  appointmentEndTime   String?   @map("appointment_end_time") // "HH:MM"
+  ownerName            String?   @map("owner_name")
+  petName              String?   @map("pet_name")
+  petSize              String?   @map("pet_size") // "SMALL" | "MEDIUM" | "LARGE"
+  breedText            String?   @map("breed_text")
+  notes                String?
+  servicesName         String[]  @default([]) @map("services_name")
+
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@index([expiresAt])
+  @@map("booking_state")
+}
