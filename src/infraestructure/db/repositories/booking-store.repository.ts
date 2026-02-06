@@ -4,6 +4,7 @@ import type {
   FlowMode,
 } from '@domain/models/booking-store.model';
 import type { PetSize } from '@domain/enums/pet-size.enum';
+import { nowInLima } from '@shared/utils/date.util';
 
 export class BookingStoreRepository {
   async findByConversationId(
@@ -14,6 +15,7 @@ export class BookingStoreRepository {
     });
 
     if (!row) return null;
+    if (row.expiresAt && row.expiresAt <= nowInLima()) return null;
 
     return {
       conversationId: row.conversationId,

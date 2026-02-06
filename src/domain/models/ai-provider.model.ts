@@ -1,15 +1,25 @@
 import { Scheduler } from './scheduler.model';
-import type { BookingState } from './booking-store.model';
+import type { BookingState, FlowMode } from './booking-store.model';
 
 export interface AIProvider {
   generateResponse(params: AIPromptRequest): Promise<AIResponse>;
+  detectPromptIntent(params: AIPromptIntentRequest): Promise<PromptIntent>;
 }
 
+export type PromptIntent = FlowMode;
+
 export interface AIPromptRequest {
-  userPrompt: string;
-  userPhoneNumber: string;
+  user: {
+    prompt: string;
+    phoneNumber: string;
+    intent: PromptIntent;
+  };
   bookingState: BookingState;
   schedulerService: Scheduler;
+}
+
+export interface AIPromptIntentRequest {
+  userPrompt: string;
 }
 
 export interface AIResponse {

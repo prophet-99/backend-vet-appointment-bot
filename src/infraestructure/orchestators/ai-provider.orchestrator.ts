@@ -4,16 +4,22 @@ import { type ParsedResponse as OpenAIParsedResponse } from 'openai/resources/re
 import { env } from '@config/env';
 import type {
   AIProvider,
+  AIPromptIntentRequest,
   AIPromptRequest,
   AIResponse,
+  PromptIntent,
 } from '@domain/models/ai-provider.model';
 import type { BookingState } from '@domain/models/booking-store.model';
 import { openAIClient } from '@infraestructure/ai/open-ai.client';
 import {
   AI_RESPONSE_SCHEMA,
   type AIResponseSchema,
+  AI_INTENT_SCHEMA,
 } from '@infraestructure/ai/ai-response.schema';
-import { OPEN_AI_SYSTEM_PROMPT } from '@infraestructure/ai/open-ai.prompt';
+import {
+  getSystemPromptByIntent,
+  OPEN_AI_PROMPT_INTENT_CLASSIFIER,
+} from '@infraestructure/ai/open-ai.prompt';
 import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
 import {
   normalizeDayInLima,
@@ -62,17 +68,46 @@ export class OpenAIProviderOrchestrator implements AIProvider {
   private async createInitialResponse(
     params: AIPromptRequest
   ): Promise<OpenAIParsedResponseType> {
+    const {
+      user: { prompt, intent },
+    } = params;
+
     return this.safeResponseParse({
       model: env.OPENAI_MODEL,
       temperature: env.OPENAI_TEMPERATURE,
       top_p: env.OPENAI_TOP_P,
       max_output_tokens: env.OPENAI_MAX_TOKENS,
       input: [
-        { role: 'system', content: OPEN_AI_SYSTEM_PROMPT },
-        { role: 'user', content: params.userPrompt },
+        {
+          role: 'system',
+          content: getSystemPromptByIntent(intent),
+        },
+        { role: 'user', content: prompt },
       ],
       tools: OPEN_AI_TOOLS as any,
     });
+  }
+
+  async detectPromptIntent(
+    params: AIPromptIntentRequest
+  ): Promise<PromptIntent> {
+    const response = await openAIClient.responses.create({
+      model: env.OPENAI_MODEL,
+      temperature: 0,
+      top_p: env.OPENAI_TOP_P,
+      max_output_tokens: 50,
+      input: [
+        { role: 'system', content: OPEN_AI_PROMPT_INTENT_CLASSIFIER },
+        { role: 'user', content: params.userPrompt },
+      ],
+    });
+
+    const parsed = AI_INTENT_SCHEMA.safeParse({
+      intent: response.output_text,
+    });
+    if (parsed.success) return parsed.data.intent;
+
+    return 'CREATE';
   }
 
   private async createToolResponse(params: {
@@ -160,7 +195,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
               startTime: params.userRequest.bookingState.appointmentStartTime!,
               endTime: params.userRequest.bookingState.appointmentEndTime!,
               ownerName: args.ownerName,
-              ownerPhone: params.userRequest.userPhoneNumber,
+              ownerPhone: params.userRequest.user.phoneNumber,
               petName: args.petName,
               size: args.petSize,
               breedText: args.breedText,

@@ -1,6 +1,13 @@
 import { PetSize } from '@domain/enums/pet-size.enum';
 
-export type FlowMode = 'BOOKING' | 'HUMAN';
+export type FlowMode =
+  | 'WELCOME'
+  | 'INFO'
+  | 'CREATE'
+  | 'EDIT'
+  | 'DELETE'
+  | 'GET'
+  | 'HUMAN';
 
 export interface BookingState {
   conversationId: string;

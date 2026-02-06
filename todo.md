@@ -13,11 +13,11 @@
 - Si el usuario no puede en ese horario, mejorar el flujo (NO AGENDA) -> [🍏]
 - Confirmarle la cita con los datos hacuiendo uso de una funcion GET -> [🍏]
 - Si un usuario ya agendo mientras este activa se puede editar algún dato. -> [🍏]
-
+- Ojo los states, no deben ser accesibles después de que la fecha de atencion alla terminado porque si no existiran conflictos -> [🍏]
 - Detectar el estado HUMANO
-- Pueden agendar para más de un perro el mismo usuario, algunos quieren para dos a la
-- Ojo los states, no deben ser accesibles después de que la fecha de atencion alla terminado porque si no existiran conflictos
+
 - hay un problema me permite agendar para una fecha que ya pasó (get avalibilyt debe de BLOQUEAR ESTO)
+- Pueden agendar para más de un perro el mismo usuario, algunos quieren para dos a la
 - Metodo para confirmar cita / rechazarla y que mande a n8n respuesta
 - SI ocurre un error GLOBAL -> forazar repuesta a n8n que vuelva aitnentarlo si ya se complica se debe derivar a la doctora
 

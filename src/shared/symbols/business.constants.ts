@@ -7,7 +7,7 @@ const APPOINTMENT_CONFIG = {
 const APP_TIMEZONE = 'America/Lima'; // APPLICATION TIMEZONE (UTC-5)
 const BOOKING_STORE_TTL_HOURS = 23; // 23 HOURS TTL FOR BOOKING STORE
 const HUMAN_ESCALATION_MESSAGE =
-  'Perfecto. Te comunicaré con la doctora para que te atienda personalmente. 🐶'; // CONVERSATION FLOW MESSAGES
+  'Perfecto 🙌 Te paso con la doctora. Puede que esté atendiendo a una mascotita en este momento, pero ni bien termine te escribe por aquí 🐶'; // CONVERSATION FLOW MESSAGES
 
 export {
   MIN_BLOCK_SIZE,

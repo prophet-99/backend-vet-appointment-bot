@@ -5,9 +5,11 @@ import type {
   BookingStore,
 } from '@domain/models/booking-store.model';
 import type { ChatTurnResponse } from '@domain/models/chat.model';
-import type { AIProvider } from '@domain/models/ai-provider.model';
+import type {
+  AIProvider,
+  PromptIntent,
+} from '@domain/models/ai-provider.model';
 import type { Scheduler } from '@domain/models/scheduler.model';
-import { wantsHuman } from '@shared/utils/text-analysis.util';
 import { nowInLima, nowInLimaISO } from '@shared/utils/date.util';
 import { patchBookingState } from '@shared/utils/state.util';
 import {
@@ -34,17 +36,13 @@ export class ConversationService {
 
     return {
       conversationId,
-      mode: 'BOOKING',
+      mode: 'WELCOME',
       expiresAt,
     };
   }
 
-  private getUserPrompt(params: {
-    bookingState: BookingState;
-    userInput: string;
-  }) {
-    const { userInput, bookingState } = params;
-    const stateSummary = `
+  private buildStateSummary(bookingState: BookingState): string {
+    return `
       mode=${bookingState.mode}
       lastUserText=${bookingState.lastUserText ?? '-'}
       lastBotText=${bookingState.lastBotText ?? '-'}
@@ -60,19 +58,44 @@ export class ConversationService {
       notes=${bookingState.notes ?? '-'}
       servicesName=${bookingState.servicesName?.join(',') ?? '-'}
     `.trim();
+  }
+
+  private getUserPrompt(params: {
+    bookingState: BookingState;
+    userInput: string;
+  }) {
+    const { userInput, bookingState } = params;
 
     return `
       [FECHA ACTUAL - PERU]
       ${nowInLimaISO()}
 
       [ESTADO ACTUAL]
-      ${stateSummary}
+      ${this.buildStateSummary(bookingState)}
 
       [MENSAJE DEL CLIENTE]
       ${userInput}
 
       [INSTRUCCION]
       Responde siguiendo las reglas.
+    `.trim();
+  }
+
+  private getIntentPrompt(params: {
+    bookingState: BookingState;
+    userInput: string;
+  }) {
+    const { userInput, bookingState } = params;
+
+    return `
+      [ESTADO ACTUAL]
+      ${this.buildStateSummary(bookingState)}
+
+      [MENSAJE DEL CLIENTE]
+      ${userInput}
+
+      [INSTRUCCION]
+      Clasifica la intencion del cliente.
     `.trim();
   }
 
@@ -84,9 +107,28 @@ export class ConversationService {
     const prevState = await this.bookingStoreService.get(params.conversationId);
     const state = prevState ?? this.newState(params.conversationId);
 
-    // TODO: Interprtar la intecnion con IA para pasar a modo HUMANO
-    // if (wantsHuman(params.userMessage)) {
-    if (false) {
+    if (state.mode === 'HUMAN') {
+      return {
+        reply: '-',
+        ignored: true,
+        reason: 'Its in HUMAN mode',
+        conversationId: state.conversationId,
+      };
+    }
+
+    let userIntent: PromptIntent = 'WELCOME';
+    if (prevState) {
+      const intentPrompt = this.getIntentPrompt({
+        bookingState: state,
+        userInput: params.userMessage,
+      });
+      const aiDetectedIntent = await this.aiProvider.detectPromptIntent({
+        userPrompt: intentPrompt,
+      });
+      userIntent = aiDetectedIntent;
+    }
+
+    if (userIntent === 'HUMAN') {
       state.mode = 'HUMAN';
       state.lastUserText = params.userMessage;
       state.lastBotText = HUMAN_ESCALATION_MESSAGE;
@@ -101,28 +143,23 @@ export class ConversationService {
       };
     }
 
-    if (state.mode === 'HUMAN') {
-      return {
-        reply: '-',
-        ignored: true,
-        reason: 'Its in HUMAN mode',
-        conversationId: state.conversationId,
-      };
-    }
-
     const userPrompt = this.getUserPrompt({
       bookingState: state,
       userInput: params.userMessage,
     });
     const aiResponse = await this.aiProvider.generateResponse({
-      userPrompt,
-      userPhoneNumber: params.userPhoneNumber,
+      user: {
+        prompt: userPrompt,
+        phoneNumber: params.userPhoneNumber,
+        intent: userIntent,
+      },
       bookingState: state,
       schedulerService: this.schedulerService,
     });
     const botReply = aiResponse.text.trim();
 
     const mergedState = patchBookingState(state, aiResponse.statePatch);
+    mergedState.mode = userIntent;
     mergedState.lastUserText = params.userMessage;
     mergedState.lastBotText = botReply;
     mergedState.expiresAt = this.calculateBookingExpiration();

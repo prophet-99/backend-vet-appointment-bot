@@ -15,3 +15,15 @@ export const AI_RESPONSE_SCHEMA = z.object({
 });
 
 export type AIResponseSchema = z.infer<typeof AI_RESPONSE_SCHEMA>;
+
+export const AI_INTENT_SCHEMA = z.object({
+  intent: z.enum([
+    'WELCOME',
+    'INFO',
+    'CREATE',
+    'EDIT',
+    'DELETE',
+    'GET',
+    'HUMAN',
+  ]),
+});

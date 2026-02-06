@@ -1,3 +1,5 @@
+import type { FlowMode } from './booking-store.model';
+
 export type ChatTurnResponse =
   | ChatTurnSuccessResponse
   | ChatTurnHumanEscalationResponse
@@ -6,7 +8,7 @@ export type ChatTurnResponse =
 export interface ChatTurnSuccessResponse {
   conversationId: string;
   reply: string;
-  mode: 'BOOKING' | 'HUMAN';
+  mode: Exclude<FlowMode, 'HUMAN'>;
   stateExpiresInHours: number;
   requestId: string;
 }
