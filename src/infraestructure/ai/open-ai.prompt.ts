@@ -179,6 +179,7 @@ export const OPEN_AI_PROMPT_CREATE = `
   RESPUESTA A "getAvailability"
   - Si getAvailability devuelve disponibilidad: Ofrece el horario sugerido al usuario y pregunta explicitamente si desea agendar
   - Si getAvailability NO devuelve disponibilidad ese dia: Ofrece el proximo horario disponible devuelto por la funcion
+  - Si getAvailability devuelve la razon de fecha/hora pasada (ej: "La fecha y hora preferida deben ser futuras..."), DEBES actualizar el campo "preferredDate" al dia siguiente (YYYY-MM-DD) y volver a ejecutar getAvailability. Repite esta regla hasta obtener una fecha valida.
 
   **REGLA OBLIGATORIA**: Antes de createAppointment SIEMPRE debes ejecutar getAvailability.
 

@@ -85,7 +85,29 @@ export class SchedulerService implements Scheduler {
     }
     const { date: appointmentDay, preferredStartMinutes } = parseResult;
 
-    //? 1) Get service IDs from names
+    //? 1) Validate grether than currentDate and time
+    if (appointmentDay! < nowInLima()) {
+      return {
+        success: false,
+        statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
+        reason: ErrorCodes.GREATHER_THAN_NOW.message,
+      };
+    }
+
+    const currentHour = nowInLima().getHours() + ':' + nowInLima().getMinutes();
+    const currentHourInMinutes = hhmmToMinutes(currentHour);
+    if (
+      preferredStartMinutes &&
+      currentHourInMinutes <= preferredStartMinutes
+    ) {
+      return {
+        success: false,
+        statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
+        reason: ErrorCodes.GREATHER_THAN_NOW.message,
+      };
+    }
+
+    //? 2) Get service IDs from names
     const services = await this.schedulerRepository.getServiceIdsByNames(
       params.servicesName
     );
@@ -99,7 +121,7 @@ export class SchedulerService implements Scheduler {
       };
     }
 
-    //? 2) Total duration = sum of rules (and rounded to a block of 15) and check availability for pet size
+    //? 3) Total duration = sum of rules (and rounded to a block of 15) and check availability for pet size
     const rules = await this.schedulerRepository.getDurations(
       serviceIds,
       params.petSize
@@ -133,45 +155,45 @@ export class SchedulerService implements Scheduler {
     const totalMinutes = rules.reduce((sum, r) => sum + r.minutes, 0);
     const requiredMinutes = ceilToBlock(totalMinutes, blockMinutes);
 
-    //? 3) Look for an opening on the current or following day (skipping Sundays/closures/business rules)
-    let currentDay = appointmentDay!;
+    //? 4) Look for an opening on the current or following day (skipping Sundays/closures/business rules)
+    let suggestedDay = appointmentDay!;
     const now = nowInLima();
     let isFirstIteration = true;
 
     for (let i = 0; i <= lookAheadDays; i++) {
-      const dayOfWeek = dayOfWeekMonToSat(currentDay);
+      const dayOfWeek = dayOfWeekMonToSat(suggestedDay);
       if (dayOfWeek === 0) {
-        currentDay = addDays(currentDay, 1);
+        suggestedDay = addDays(suggestedDay, 1);
         continue;
       }
 
-      const { closed } = await this.schedulerRepository.isClosed(currentDay);
+      const { closed } = await this.schedulerRepository.isClosed(suggestedDay);
       if (closed) {
-        currentDay = addDays(currentDay, 1);
+        suggestedDay = addDays(suggestedDay, 1);
         continue;
       }
 
       const workShift = await this.schedulerRepository.getShift(dayOfWeek);
       if (!workShift || !workShift.enabled) {
-        currentDay = addDays(currentDay, 1);
+        suggestedDay = addDays(suggestedDay, 1);
         continue;
       }
 
       const businessCheck = await this.schedulerRepository.checkBusinessRules(
-        currentDay,
+        suggestedDay,
         serviceIds,
         params.petSize,
         now
       );
       if (!businessCheck.allowed) {
-        currentDay = addDays(currentDay, 1);
+        suggestedDay = addDays(suggestedDay, 1);
         continue;
       }
 
       const workShiftStart = hhmmToMinutes(workShift.startTime);
       const workShiftEnd = hhmmToMinutes(workShift.endTime);
       const dbBusyIntervals = await this.schedulerRepository.getBusyIntervals(
-        currentDay,
+        suggestedDay,
         now
       );
       const busyIntervals = mergeIntervals(
@@ -198,12 +220,20 @@ export class SchedulerService implements Scheduler {
         requiredMinutes,
       });
 
-      if (slot) {
+      const currentHour =
+        nowInLima().getHours() + ':' + nowInLima().getMinutes();
+      let hourInMinutesToday =
+        nowInLima() === suggestedDay ? hhmmToMinutes(currentHour) : 0;
+      if (
+        slot &&
+        suggestedDay >= nowInLima() &&
+        slot.start > hourInMinutesToday
+      ) {
         return {
           success: true,
           statusCode: 200,
           appointment: {
-            appointmentDay: currentDay,
+            appointmentDay: suggestedDay,
             suggestedStart: minutesToHhmm(slot.start),
             suggestedEnd: minutesToHhmm(slot.end),
             requiredMinutes,
@@ -212,7 +242,7 @@ export class SchedulerService implements Scheduler {
         };
       }
 
-      currentDay = addDays(currentDay, 1);
+      suggestedDay = addDays(suggestedDay, 1);
       isFirstIteration = false;
     }
 

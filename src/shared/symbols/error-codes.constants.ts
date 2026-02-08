@@ -27,6 +27,12 @@ export const ErrorCodes = {
     message:
       'No se encontraron cupos disponibles en los próximos días. Por favor, espere en línea para evaluar la posibilidad de agendar su cita.',
   },
+  GREATHER_THAN_NOW: {
+    code: 'GREATHER_THAN_NOW',
+    statusCode: 422,
+    message:
+      'La fecha y hora preferida deben ser futuras. Por favor, ingrese una fecha y hora válidas.',
+  },
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
