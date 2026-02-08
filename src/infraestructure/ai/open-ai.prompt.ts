@@ -1,4 +1,43 @@
+import { DateTime } from 'luxon';
+
 import type { PromptIntent } from '@domain/models/ai-provider.model';
+import { APP_TIMEZONE } from '@shared/symbols/business.constants';
+
+const getCurrentDateTimeContext = (): string => {
+  const now = DateTime.now().setZone(APP_TIMEZONE);
+  const weekdays = [
+    'Domingo',
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+  ];
+  const today = now.toFormat('yyyy-MM-dd');
+  const todayWeekday = weekdays[now.weekday % 7];
+
+  const next7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = now.plus({ days: i + 1 });
+    return `    - ${weekdays[date.weekday % 7]}: ${date.toFormat('yyyy-MM-dd')}`;
+  }).join('\n');
+
+  return `
+  FECHA Y HORA ACTUAL (Zona horaria: Lima, Perú - America/Lima UTC-5)
+  - Hoy es: ${todayWeekday} ${today}
+  - Hora actual: ${now.toFormat('HH:mm')}
+  
+  REFERENCIA DE PRÓXIMOS 7 DÍAS:
+${next7Days}
+  
+  REGLA CRÍTICA PARA CÁLCULO DE FECHAS:
+  - Cuando el usuario diga "lunes", "martes", etc., debes usar la PRIMERA fecha de ese día de la semana que aparezca en la tabla de referencia anterior.
+  - SIEMPRE verifica la tabla antes de calcular.
+  - Si el usuario dice "hoy": ${today}
+  - Si el usuario dice "mañana": ${now.plus({ days: 1 }).toFormat('yyyy-MM-dd')}
+  - Si el usuario dice "pasado mañana": ${now.plus({ days: 2 }).toFormat('yyyy-MM-dd')}
+`;
+};
 
 const FORMAT_RESPONSE = `
   - Devuelve tu respuesta en un solo objeto JSON llamado "booking_state" con estos campos:
@@ -13,6 +52,8 @@ const FORMAT_RESPONSE = `
 `;
 
 export const OPEN_AI_PROMPT_WELCOME = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 
@@ -68,6 +109,8 @@ export const OPEN_AI_PROMPT_INTENT_CLASSIFIER = `
 `;
 
 export const OPEN_AI_PROMPT_INFO = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 
@@ -94,6 +137,8 @@ export const OPEN_AI_PROMPT_INFO = `
 `;
 
 export const OPEN_AI_PROMPT_CREATE = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 
@@ -118,7 +163,7 @@ export const OPEN_AI_PROMPT_CREATE = `
   INTERPRETACION Y EXTRACCION DE DATOS
   - "mi hijo/mi hija/mi bebe/mi nino" = mascota segun contexto.
   - **RAZA**: Si el usuario menciona cualquier raza (border collie, labrador, pastor aleman, etc), DEBES guardarlo como breedText.
-  - Fecha interna: Siempre en el formato "YYYY-MM-DD" (Lima/Peru). "hoy/manana" segun fecha actual en LIMA / PERU.
+  - Fecha interna: Siempre en el formato "YYYY-MM-DD" (Lima/Peru). USA LA TABLA DE REFERENCIA proporcionada al inicio para calcular las fechas correctamente.
   - Hora interna: HH:MM 24h. AM/PM correctos. "manana"=09:00, "tarde"=14:00, "3pm"=15:00.
 
   INFERENCIA AUTOMATICA DE TAMANO DESDE RAZA
@@ -145,10 +190,12 @@ export const OPEN_AI_PROMPT_CREATE = `
 
   - Hora preferida (preferredTime) es OPCIONAL
 
-  **REGLA CRITICA**: Si al revisar tu checklist faltan 1 o mas datos, DEBES pedir TODOS los datos faltantes en un SOLO mensaje breve y escaneable (UN ITEM POR LINEA).
+  **REGLAS CRITICA**:
+  Si al revisar tu checklist faltan 1 o mas datos, DEBES pedir TODOS los datos faltantes en un SOLO mensaje breve y escaneable (UN ITEM POR LINEA).
     - Ejemplo: "Me faltan algunos datos:
     - ¿Cual es la raza de tu mascota?
     - ¿Cual es tu nombre completo?"
+  Si el usuario dice que NO quiere agregar notas (ej: "sin notas", "sin detalles", "no hay notas", "ninguna", "no deseo agregar"), debes guardar notes = "sin notas" y NO volver a pedirlas.
 
   - PROHIBIDO inventar valores (NO asumas tamanos, servicios, mascotas que el usuario NO menciono)
   - **NO CONTINUES HASTA TENER TODOS LOS DATOS DEL CHECKLIST**
@@ -278,6 +325,8 @@ export const OPEN_AI_PROMPT_CREATE = `
 `;
 
 export const OPEN_AI_PROMPT_EDIT = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 
@@ -317,6 +366,8 @@ export const OPEN_AI_PROMPT_EDIT = `
 `;
 
 export const OPEN_AI_PROMPT_DELETE = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 
@@ -368,6 +419,8 @@ export const OPEN_AI_PROMPT_DELETE = `
 `;
 
 export const OPEN_AI_PROMPT_GET = `
+  ${getCurrentDateTimeContext()}
+  
   Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
   Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
 

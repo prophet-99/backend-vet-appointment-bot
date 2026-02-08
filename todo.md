@@ -16,8 +16,8 @@
 - Ojo los states, no deben ser accesibles después de que la fecha de atencion alla terminado porque si no existiran conflictos -> [🍏]
 - Detectar el estado HUMANO -> [🍏]
 - hay un problema me permite agendar para una fecha que ya pasó (get availibity debe de BLOQUEAR ESTO) -> [🍏]
+- contextos fallidos: para el lunes, para el martes, etc. [POR LA FECHA] -> [🍏]
 
-- contextos fallidos: para el lunes, para el martes, etc. [POR LA FECHA]
 - Pueden agendar para más de un perro el mismo usuario, algunos quieren para dos a la
 - SI ocurre un error GLOBAL -> forazar repuesta a n8n que vuelva aitnentarlo si ya se complica se debe derivar a la doctora
 - Esta ocurriendo un error con código apt_XXXX..cuando ocurra esto forzar el guardado desde backend, hacer un lower to stirng de ambos y si incluye mas o 4 ebntonces forzar a guardar

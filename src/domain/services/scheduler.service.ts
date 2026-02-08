@@ -95,11 +95,9 @@ export class SchedulerService implements Scheduler {
     }
 
     const currentHour = nowInLima().getHours() + ':' + nowInLima().getMinutes();
-    const currentHourInMinutes = hhmmToMinutes(currentHour);
-    if (
-      preferredStartMinutes &&
-      currentHourInMinutes <= preferredStartMinutes
-    ) {
+    const hourInMinutesToday =
+      nowInLima() === appointmentDay ? hhmmToMinutes(currentHour) : 2_000; // 1439 is 23:59
+    if (preferredStartMinutes && hourInMinutesToday <= preferredStartMinutes) {
       return {
         success: false,
         statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
@@ -222,7 +220,7 @@ export class SchedulerService implements Scheduler {
 
       const currentHour =
         nowInLima().getHours() + ':' + nowInLima().getMinutes();
-      let hourInMinutesToday =
+      const hourInMinutesToday =
         nowInLima() === suggestedDay ? hhmmToMinutes(currentHour) : 0;
       if (
         slot &&
