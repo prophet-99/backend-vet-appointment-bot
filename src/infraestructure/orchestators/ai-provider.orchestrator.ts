@@ -212,6 +212,26 @@ export class OpenAIProviderOrchestrator implements AIProvider {
             if (fullDetails.success) {
               appointmentDetails = fullDetails;
             }
+
+            if (created.success && created.appointment?.appointmentId) {
+              const ownerName = args.ownerName ?? statePatch.ownerName;
+              statePatch = patchBookingState(
+                {},
+                {
+                  ownerName,
+                  preferredDate: '-',
+                  preferredTime: '-',
+                  appointmentDate: '-',
+                  appointmentStartTime: '-',
+                  appointmentEndTime: '-',
+                  petName: '-',
+                  petSize: null as unknown as BookingState['petSize'],
+                  breedText: '-',
+                  notes: '-',
+                  servicesName: [],
+                }
+              );
+            }
           }
 
           toolOutputs.push({
