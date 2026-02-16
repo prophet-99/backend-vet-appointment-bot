@@ -4,20 +4,18 @@ import { type ParsedResponse as OpenAIParsedResponse } from 'openai/resources/re
 import { env } from '@config/env';
 import type {
   AIProvider,
-  AIPromptIntentRequest,
-  AIPromptRequest,
+  AIRequest,
   AIResponse,
-  PromptIntent,
 } from '@domain/models/ai-provider.model';
 import type { BookingState } from '@domain/models/booking-store.model';
 import { openAIClient } from '@infraestructure/ai/open-ai.client';
 import {
-  AI_RESPONSE_SCHEMA,
-  type AIResponseSchema,
-  AI_INTENT_SCHEMA,
+  AI_INIT_RESPONSE_SCHEMA,
+  type AIInitResponseSchema,
 } from '@infraestructure/ai/ai-response.schema';
 import {
   getSystemPromptByIntent,
+  getUserPrompt,
   OPEN_AI_PROMPT_INTENT_CLASSIFIER,
 } from '@infraestructure/ai/open-ai.prompt';
 import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
@@ -26,122 +24,99 @@ import {
   normalizeDayInLimaISO,
   normalizeDateInLimaISO,
 } from '@shared/utils/date.util';
+import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import {
   patchBookingState,
   extractAIResponseFromRawOutput,
   getSafeBotReply,
 } from '@shared/utils/state.util';
 
-type OpenAIParsedResponseType = OpenAIParsedResponse<AIResponseSchema> & {
+type OpenAIParsedResponseType = OpenAIParsedResponse<AIInitResponseSchema> & {
   _request_id?: string | null;
 };
 
 export class OpenAIProviderOrchestrator implements AIProvider {
-  private async safeResponseParse(params: {
-    model: string;
-    temperature: number;
-    top_p: number;
-    max_output_tokens: number;
-    input: any[];
-    tools?: any;
-    previous_response_id?: string;
-  }): Promise<OpenAIParsedResponseType> {
-    try {
-      return await openAIClient.responses.parse({
-        ...params,
-        text: {
-          format: zodTextFormat(AI_RESPONSE_SCHEMA, 'booking_state'),
-        },
-      });
-    } catch (err: any) {
-      const raw = await openAIClient.responses.create(params);
-      const extractedParsed = extractAIResponseFromRawOutput(raw.output);
-
-      return {
-        ...(raw as any),
-        output_parsed: extractedParsed,
-        _request_id: (raw as any).id ?? null,
-      } as OpenAIParsedResponseType;
-    }
+  private buildUserStateSummary(bookingState: BookingState): string {
+    return `
+      mode=${bookingState.mode}
+      lastUserText=${bookingState.lastUserText ?? ''}
+      lastBotText=${bookingState.lastBotText ?? ''}
+      preferredDate=${bookingState.preferredDate ?? ''}
+      preferredTime=${bookingState.preferredTime ?? ''}
+      petName=${bookingState.petName ?? ''}
+      petSize=${bookingState.petSize ?? ''}
+      petBreed=${bookingState.petBreed ?? ''}
+      notes=${bookingState.notes ?? ''}
+      servicesName=${bookingState.servicesName?.join(',') ?? ''}
+    `.trim();
   }
 
-  private async createInitialResponse(
-    params: AIPromptRequest
-  ): Promise<OpenAIParsedResponseType> {
-    const {
-      user: { prompt, intent },
-    } = params;
+  private async createAIResponse(params: {
+    systemPrompt: string;
+    userPrompt: string;
+    zodFormatResponse: any;
+  }): Promise<OpenAIParsedResponseType> {
+    const { systemPrompt, userPrompt, zodFormatResponse } = params;
 
-    return this.safeResponseParse({
+    return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
       temperature: env.OPENAI_TEMPERATURE,
       top_p: env.OPENAI_TOP_P,
       max_output_tokens: env.OPENAI_MAX_TOKENS,
       input: [
-        {
-          role: 'system',
-          content: getSystemPromptByIntent(intent),
-        },
-        { role: 'user', content: prompt },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       tools: OPEN_AI_TOOLS as any,
+      text: { format: zodFormatResponse },
     });
-  }
-
-  async detectPromptIntent(
-    params: AIPromptIntentRequest
-  ): Promise<PromptIntent> {
-    const response = await openAIClient.responses.create({
-      model: env.OPENAI_MODEL,
-      temperature: 0,
-      top_p: env.OPENAI_TOP_P,
-      max_output_tokens: 50,
-      input: [
-        { role: 'system', content: OPEN_AI_PROMPT_INTENT_CLASSIFIER },
-        { role: 'user', content: params.userPrompt },
-      ],
-    });
-
-    const parsed = AI_INTENT_SCHEMA.safeParse({
-      intent: response.output_text,
-    });
-    if (parsed.success) return parsed.data.intent;
-
-    return 'CREATE';
   }
 
   private async createToolResponse(params: {
     previousResponseId: string;
     toolOutputs: any[];
+    zodFormatResponse: any;
   }): Promise<OpenAIParsedResponseType> {
-    return this.safeResponseParse({
+    const { previousResponseId, toolOutputs, zodFormatResponse } = params;
+
+    return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
       temperature: env.OPENAI_TEMPERATURE,
       top_p: env.OPENAI_TOP_P,
       max_output_tokens: env.OPENAI_MAX_TOKENS,
-      previous_response_id: params.previousResponseId,
-      input: params.toolOutputs,
+      previous_response_id: previousResponseId,
+      input: toolOutputs,
+      text: { format: zodFormatResponse },
     });
   }
 
-  private getFunctionCalls(resp: any) {
-    return (resp.output ?? []).filter((x: any) => x.type === 'function_call');
-  }
-
-  private async runToolLoop(params: {
-    userRequest: AIPromptRequest;
+  private async runAndExecuteIATools(params: {
+    aiRequest: AIRequest;
     aiResponse: OpenAIParsedResponseType;
-    statePatch: Partial<BookingState>;
   }): Promise<{
-    response: OpenAIParsedResponseType;
+    toolsResponse: OpenAIParsedResponseType;
     statePatch: Partial<BookingState>;
   }> {
-    let response = params.aiResponse;
-    let statePatch = params.statePatch;
-    let lastAvailability = null;
+    const {
+      aiResponse,
+      aiRequest: { bookingState, schedulerService, userName, userPhoneNumber },
+    } = params;
+    const getFunctionCalls = (resp: any) => {
+      return (resp.output ?? []).filter((x: any) => x.type === 'function_call');
+    };
+
+    let zodFormatResponse = zodTextFormat(
+      AI_INIT_RESPONSE_SCHEMA,
+      'booking_state'
+    );
+    let statePatch = patchBookingState(
+      bookingState,
+      aiResponse.output_parsed as Partial<BookingState>
+    );
+    let toolsResponse = aiResponse;
 
     for (let i = 0; i < 5; i++) {
-      const calls = this.getFunctionCalls(response);
+      const calls = getFunctionCalls(toolsResponse);
       if (!calls.length) break;
 
       const toolOutputs: any[] = [];
@@ -151,88 +126,101 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         const args = call.arguments ? JSON.parse(call.arguments) : {};
 
         if (name === 'getAvailability') {
-          const availability =
-            await params.userRequest.schedulerService.getAvailibility({
-              day: normalizeDayInLimaISO(args.preferredDate),
-              preferredTime: args.preferredTime,
-              servicesName: args.servicesName,
-              petSize: args.petSize,
-            });
-          lastAvailability = availability;
+          const missingParams: string[] = [];
+          if (!args.preferredDate) missingParams.push('preferredDate');
+          if (!args.petName) missingParams.push('petName');
+          if (!args.petSize) missingParams.push('petSize');
+          if (!args.petBreed) missingParams.push('petBreed');
+          if (!args.notes) missingParams.push('notes');
+          if (!args.servicesName) missingParams.push('servicesName');
 
-          statePatch = patchBookingState(statePatch, {
-            appointmentDate: normalizeDateInLimaISO(
-              lastAvailability.appointment?.appointmentDay!
-            ),
-            appointmentStartTime: lastAvailability.appointment?.suggestedStart,
-            appointmentEndTime: lastAvailability.appointment?.suggestedEnd,
-            ownerName: args.ownerName,
-            servicesName: Array.isArray(args.servicesName)
-              ? args.servicesName
-              : [],
+          if (missingParams.length > 0) {
+            const missingError = ErrorCodes.MISSING_REQUIRED_PARAMETERS;
+
+            throw new Error(missingError.code, {
+              cause: {
+                statusCode: missingError.statusCode,
+                errorReason: `${missingError.message}: [${missingParams.join(', ')}]`,
+              },
+            });
+          }
+
+          const availability = await schedulerService.getAvailibility({
+            day: normalizeDayInLimaISO(args.preferredDate),
+            preferredTime: args.preferredTime,
+            servicesName: args.servicesName,
             petSize: args.petSize,
-            petName: args.petName,
+          });
+
+          if (!availability.success) {
+            throw new Error(availability.errorCode, {
+              cause: {
+                statusCode: availability.statusCode,
+                errorReason: availability.errorReason,
+              },
+            });
+          }
+
+          const appointment = availability.appointment;
+          statePatch = patchBookingState(statePatch, {
+            preferredDate: normalizeDateInLimaISO(appointment?.appointmentDay!),
+            preferredTime: `${appointment?.suggestedStart} - ${appointment?.suggestedEnd}`,
           });
 
           toolOutputs.push({
             type: 'function_call_output',
             call_id: call.call_id,
-            output: JSON.stringify(availability),
+            output: JSON.stringify(appointment),
           });
         }
 
         if (name === 'createAppointment') {
-          const safeServiceIds =
-            await params.userRequest.schedulerService.getServicesIdByNames(
-              statePatch.servicesName || []
-            );
+          const safeServices = await schedulerService.getServicesIdByNames(
+            statePatch.servicesName || []
+          );
 
-          const created =
-            await params.userRequest.schedulerService.createAppointment({
-              day: normalizeDayInLima(
-                params.userRequest.bookingState.appointmentDate!
-              ),
-              startTime: params.userRequest.bookingState.appointmentStartTime!,
-              endTime: params.userRequest.bookingState.appointmentEndTime!,
-              ownerName: args.ownerName,
-              ownerPhone: params.userRequest.user.phoneNumber,
-              petName: args.petName,
-              size: args.petSize,
-              breedText: args.breedText,
-              notes: args.notes,
-              serviceIds: safeServiceIds as string[],
+          if (!safeServices.success) {
+            throw new Error(safeServices.errorCode, {
+              cause: {
+                statusCode: safeServices.statusCode,
+                errorReason: safeServices.errorReason,
+              },
             });
-
-          let appointmentDetails = created;
-          if (created.success && created.appointment?.appointmentId) {
-            const fullDetails =
-              await params.userRequest.schedulerService.getAppointment(
-                created.appointment.appointmentId
-              );
-            if (fullDetails.success) {
-              appointmentDetails = fullDetails;
-            }
-
-            if (created.success && created.appointment?.appointmentId) {
-              const ownerName = args.ownerName ?? statePatch.ownerName;
-              statePatch = patchBookingState(
-                {},
-                {
-                  ownerName,
-                  preferredDate: '-',
-                  preferredTime: '-',
-                  appointmentDate: '-',
-                  appointmentStartTime: '-',
-                  appointmentEndTime: '-',
-                  petName: '-',
-                  petSize: null as unknown as BookingState['petSize'],
-                  breedText: '-',
-                  notes: '-',
-                  servicesName: [],
-                }
-              );
-            }
           }
+
+          const serviceIds = safeServices.serviceIds;
+          const appointmentCreated = await schedulerService.createAppointment({
+            day: normalizeDayInLima(statePatch.preferredDate!),
+            startTime: statePatch.preferredTime!.split('-')[0].trim(),
+            endTime: statePatch.preferredTime!.split('-')[1].trim(),
+            ownerName: userName,
+            ownerPhone: userPhoneNumber,
+            petName: statePatch.petName!,
+            petSize: statePatch.petSize!,
+            petBreed: statePatch.petBreed!,
+            notes: statePatch.notes!,
+            serviceIds: serviceIds!,
+          });
+
+          if (!appointmentCreated.success) {
+            throw new Error(appointmentCreated.errorCode, {
+              cause: {
+                statusCode: appointmentCreated.statusCode,
+                errorReason: appointmentCreated.errorReason,
+              },
+            });
+          }
+
+          const appointmentDetails = appointmentCreated.appointment;
+          statePatch = patchBookingState(statePatch, {
+            preferredDate: '',
+            preferredTime: '',
+            petName: '',
+            petSize: null as unknown as BookingState['petSize'],
+            petBreed: '',
+            notes: '',
+            servicesName: [],
+          });
 
           toolOutputs.push({
             type: 'function_call_output',
@@ -241,106 +229,95 @@ export class OpenAIProviderOrchestrator implements AIProvider {
           });
         }
 
-        if (name === 'getAppointment') {
-          const appDetail =
-            await params.userRequest.schedulerService.getAppointment(
-              args.appointmentId
-            );
-
-          toolOutputs.push({
-            type: 'function_call_output',
-            call_id: call.call_id,
-            output: JSON.stringify(appDetail),
-          });
-        }
-
         if (name === 'cancelAppointment') {
-          const cancelResult =
-            await params.userRequest.schedulerService.cancelAppointment(
-              args.appointmentId
-            );
+          const appointmentCancelled = await schedulerService.cancelAppointment(
+            args.appointmentId
+          );
+
+          if (!appointmentCancelled.success) {
+            throw new Error(appointmentCancelled.errorCode, {
+              cause: {
+                statusCode: appointmentCancelled.statusCode,
+                errorReason: appointmentCancelled.errorReason,
+              },
+            });
+          }
 
           toolOutputs.push({
             type: 'function_call_output',
             call_id: call.call_id,
-            output: JSON.stringify(cancelResult),
+            output: JSON.stringify(appointmentCancelled),
           });
         }
       }
 
-      response = await this.createToolResponse({
-        previousResponseId: response.id,
+      toolsResponse = await this.createToolResponse({
+        previousResponseId: toolsResponse.id,
         toolOutputs,
+        zodFormatResponse: zodTextFormat(
+          AI_INIT_RESPONSE_SCHEMA,
+          'booking_state'
+        ),
       });
     }
 
-    return { response, statePatch };
+    return { toolsResponse, statePatch };
   }
 
-  private buildStatePatchFromParsed(params: {
-    aiResponse: AIResponseSchema | null;
-    bookingState: BookingState;
-  }): Partial<BookingState> {
-    const { aiResponse, bookingState } = params;
+  async generateResponse(params: AIRequest): Promise<AIResponse> {
+    try {
+      const { bookingState } = params;
 
-    const isValidString = (value?: string | null): boolean =>
-      typeof value === 'string' && value.trim() !== '' && value !== '-';
-    const pickString = (
-      currentValue?: string,
-      nextValue?: string | null
-    ): string | undefined => {
-      if (isValidString(nextValue)) return nextValue as string;
-      if (isValidString(currentValue)) return currentValue as string;
-      return '-';
-    };
-    const pickArray = (
-      currentValue?: string[],
-      nextValue?: string[] | null
-    ): string[] => {
-      if (Array.isArray(nextValue) && nextValue.length > 0) return nextValue;
-      if (Array.isArray(currentValue) && currentValue.length > 0)
-        return currentValue;
-      return [];
-    };
+      const systemPrompt = getSystemPromptByIntent(bookingState.mode);
+      const userPrompt = getUserPrompt(
+        this.buildUserStateSummary(bookingState),
+        bookingState.lastUserText
+      );
 
-    return {
-      preferredDate: pickString(
-        bookingState.preferredDate,
-        aiResponse?.preferredDate
-      ),
-      preferredTime: pickString(
-        bookingState.preferredTime,
-        aiResponse?.preferredTime
-      ),
-      servicesName: pickArray(
-        bookingState.servicesName,
-        aiResponse?.servicesName
-      ),
-      petSize: aiResponse?.petSize ?? bookingState.petSize,
-      petName: pickString(bookingState.petName, aiResponse?.petName),
-      breedText: pickString(bookingState.breedText, aiResponse?.breedText),
-      ownerName: pickString(bookingState.ownerName, aiResponse?.ownerName),
-      notes: pickString(bookingState.notes, aiResponse?.notes),
-    };
-  }
+      const initialAIResponse = await this.createAIResponse({
+        systemPrompt,
+        userPrompt,
+        zodFormatResponse: zodTextFormat(
+          AI_INIT_RESPONSE_SCHEMA,
+          'booking_state'
+        ),
+      });
 
-  async generateResponse(params: AIPromptRequest): Promise<AIResponse> {
-    const initialResponse = await this.createInitialResponse(params);
-    const buildAiResponse = this.buildStatePatchFromParsed({
-      aiResponse: initialResponse.output_parsed,
-      bookingState: params.bookingState!,
-    });
+      // TODO: RETURN FLOWCONTROL STATUS
+      const { toolsResponse, statePatch } = await this.runAndExecuteIATools({
+        aiRequest: params,
+        aiResponse: initialAIResponse,
+      });
 
-    const { response, statePatch } = await this.runToolLoop({
-      userRequest: params,
-      aiResponse: initialResponse,
-      statePatch: patchBookingState({}, buildAiResponse),
-    });
+      return {
+        requestId: toolsResponse?._request_id ?? '',
+        text: getSafeBotReply(toolsResponse.output_parsed),
+        statePatch,
+        statusCode: 200,
+      };
+    } catch (error: any) {
+      console.error('☢ =======> Error generating AI response:', error);
 
-    return {
-      text: getSafeBotReply(response.output_parsed),
-      requestId: response?._request_id ?? '',
-      statePatch,
-    };
+      if (error?.cause?.statusCode && error?.cause?.errorReason) {
+        return {
+          requestId: '',
+          text: '',
+          statePatch: {},
+          statusCode: error.cause.statusCode,
+          errorCode: error.message,
+          errorReason: error.cause.errorReason,
+        };
+      }
+
+      return {
+        // TODO: IF TWO ERRORS (SIN CONTROLAR) DERIVAR A HUMAN (CITA MANUAL)
+        requestId: '',
+        text: '',
+        statePatch: {},
+        statusCode: ErrorCodes.AI_GENERATE_RESPONSE_FAILED.statusCode,
+        errorCode: ErrorCodes.AI_GENERATE_RESPONSE_FAILED.code,
+        errorReason: ErrorCodes.AI_GENERATE_RESPONSE_FAILED.message,
+      };
+    }
   }
 }

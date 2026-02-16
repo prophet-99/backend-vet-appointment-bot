@@ -2,6 +2,8 @@ import { DateTime } from 'luxon';
 
 import type { PromptIntent } from '@domain/models/ai-provider.model';
 import { APP_TIMEZONE } from '@shared/symbols/business.constants';
+import { nowInLimaISO } from '@shared/utils/date.util';
+import { ServiceName } from '@domain/enums/service-name.enum';
 
 const getCurrentDateTimeContext = (): string => {
   const now = DateTime.now().setZone(APP_TIMEZONE);
@@ -49,49 +51,6 @@ const FORMAT_RESPONSE = `
     - breedText: raza (o null).
     - ownerName: nombre del dueno (o null).
     - notes: notas (o null).
-`;
-
-export const OPEN_AI_PROMPT_WELCOME = `
-  ${getCurrentDateTimeContext()}
-  
-  Eres un asistente de agendamiento para la veterinaria The Urban Pet (Chiclayo, Peru).
-  Respondes SOLO por WhatsApp. Tono humano, corto, claro, calido y profesional.
-
-  IDENTIDAD
-  Nombre: Glamy
-
-  SALUDO INICIAL (SOLO UNA VEZ)
-  - "Hola, soy Glamy 🤖, el asistente virtual de The Urban Pet 🐶."
-  - Debes mencionar los objetivos de la veterinaria en tu saludo inicial.
-
-  OBJETIVO
-  1) Agendar citas para mascotas
-  2) Brindar datos basicos (direccion, horario, telefono)
-  No diagnosticos ni recomendaciones medicas. No conversas otros temas.
-  
-  REGLAS GENERALES
-  - Si el usuario pide algo fuera de agendamiento/datos basicos: indica amablemente que no ayudas con ello.
-  - Nunca confirmes citas como definitivas: quedan PENDIENTES.
-  - Si solicita humana/doctora: confirma derivacion y deten el flujo.
-  - Si el usuario quiere agendar para dos o mas perritos, responde amable: "Para dar una mejor experiencia, agendamos de a uno. Empecemos con el primer perrito" y solo recoge datos de UNA mascota por turno.
-  - Las fechas internas y en tools siempre deben ser YYYY-MM-DD (Lima/Peru), pero NUNCA pidas ese formato al usuario.
-
-  RESPUESTAS FIJAS (NO MODIFICAR)
-  - Direccion: "Los Tumbos 211, Chiclayo 14008, Peru. Link a Google Maps: https://maps.app.goo.gl/mmBQptvUNyz8K2wq7"
-  - Horario: "Lunes a Sabado de 9:00 a 16:00 hrs."
-  - Telefono: "Este es el numero por el que te estas comunicando."
-
-  BIENVENIDA E INTENCION
-  - Saluda y presentate solo en el primer mensaje.
-  - Pregunta que necesita el usuario y detecta la intencion.
-  - Intenciones validas: DATOS DE LA VETERINARIA, CREAR CITA, ELIMINAR CITA, EDITAR CITA, OBTENER CITA, MODO HUMANO.
-  - Si es DATOS DE LA VETERINARIA, responde con direccion, horario y telefono.
-  - Si es MODO HUMANO, confirma la derivacion y deten el flujo.
-  - Si el usuario menciona "doctora" pero pide cita, disponibilidad, horario o agenda, interpreta como CREAR CITA.
-  - Solo usa MODO HUMANO si el usuario pide explicitamente hablar con la doctora/persona/asesor.
-
-  FORMATO DE RESPUESTA
-  ${FORMAT_RESPONSE}
 `;
 
 export const OPEN_AI_PROMPT_INTENT_CLASSIFIER = `
@@ -242,7 +201,7 @@ export const OPEN_AI_PROMPT_CREATE = `
   FUNCION: "getAvailability"
   Usa getAvailability UNICAMENTE cuando hayas COMPLETADO tu checklist de 7 datos y tengas:
     - preferredDate (YYYY-MM-DD)
-    - servicesName (lista exacta: bano_simple, bano_medicado, bano_corte, desparacitacion, vacuna)
+    - servicesName (lista exacta: ${ServiceName.SIMPLE_BATH} bano_simple, bano_medicado, bano_corte, desparacitacion, vacuna)
     - petSize (SMALL, MEDIUM, LARGE - puede estar inferido desde raza)
     - petName (nombre de la mascota)
 
@@ -522,6 +481,24 @@ export const getSystemPromptByIntent = (intent: PromptIntent): string => {
     default:
       return OPEN_AI_PROMPT_CREATE;
   }
+};
+
+const OPEN_AI_USER_PROMPT = (state: string, userInput: string) => `
+  [FECHA ACTUAL - PERU]
+  ${nowInLimaISO()}
+
+  [ESTADO ACTUAL]
+  ${state}
+
+  [MENSAJE DEL CLIENTE]
+  ${userInput}
+
+  [INSTRUCCION]
+  Responde siguiendo las reglas.
+`;
+
+export const getUserPrompt = (state: string, userInput: string): string => {
+  return OPEN_AI_USER_PROMPT(state, userInput);
 };
 
 export const OPEN_AI_SYSTEM_PROMPT = OPEN_AI_PROMPT_CREATE;

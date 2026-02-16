@@ -42,26 +42,26 @@ const main = async (consoleMessage: () => void) => {
   // simple/medicated bath: small=50, med=90, large=120
   // cut: small=30, med=40, large=60
   // vaccine: small=15, med=15, large=15
-  const rules: Array<{ service: string; size: PetSize; minutes: number }> = [
-    { service: 'bano_simple', size: 'SMALL', minutes: 60 },
-    { service: 'bano_simple', size: 'MEDIUM', minutes: 60 },
-    { service: 'bano_simple', size: 'LARGE', minutes: 120 },
+  const rules: Array<{ service: string; petSize: PetSize; minutes: number }> = [
+    { service: 'bano_simple', petSize: 'SMALL', minutes: 60 },
+    { service: 'bano_simple', petSize: 'MEDIUM', minutes: 60 },
+    { service: 'bano_simple', petSize: 'LARGE', minutes: 120 },
 
-    { service: 'bano_medicado', size: 'SMALL', minutes: 60 },
-    { service: 'bano_medicado', size: 'MEDIUM', minutes: 60 },
-    { service: 'bano_medicado', size: 'LARGE', minutes: 120 },
+    { service: 'bano_medicado', petSize: 'SMALL', minutes: 60 },
+    { service: 'bano_medicado', petSize: 'MEDIUM', minutes: 60 },
+    { service: 'bano_medicado', petSize: 'LARGE', minutes: 120 },
 
-    { service: 'bano_corte', size: 'SMALL', minutes: 90 },
-    { service: 'bano_corte', size: 'MEDIUM', minutes: 120 },
-    { service: 'bano_corte', size: 'LARGE', minutes: 0 },
+    { service: 'bano_corte', petSize: 'SMALL', minutes: 90 },
+    { service: 'bano_corte', petSize: 'MEDIUM', minutes: 120 },
+    { service: 'bano_corte', petSize: 'LARGE', minutes: 0 },
 
-    { service: 'vacuna', size: 'SMALL', minutes: 15 },
-    { service: 'vacuna', size: 'MEDIUM', minutes: 15 },
-    { service: 'vacuna', size: 'LARGE', minutes: 15 },
+    { service: 'vacuna', petSize: 'SMALL', minutes: 15 },
+    { service: 'vacuna', petSize: 'MEDIUM', minutes: 15 },
+    { service: 'vacuna', petSize: 'LARGE', minutes: 15 },
 
-    { service: 'desparacitacion', size: 'SMALL', minutes: 15 },
-    { service: 'desparacitacion', size: 'MEDIUM', minutes: 15 },
-    { service: 'desparacitacion', size: 'LARGE', minutes: 15 },
+    { service: 'desparacitacion', petSize: 'SMALL', minutes: 15 },
+    { service: 'desparacitacion', petSize: 'MEDIUM', minutes: 15 },
+    { service: 'desparacitacion', petSize: 'LARGE', minutes: 15 },
   ];
 
   const svc = await prisma.service.findMany({
@@ -72,12 +72,15 @@ const main = async (consoleMessage: () => void) => {
   for (const r of rules) {
     await prisma.durationRule.upsert({
       where: {
-        serviceId_size: { serviceId: svcByName[r.service], size: r.size },
+        serviceId_petSize: {
+          serviceId: svcByName[r.service],
+          petSize: r.petSize,
+        },
       },
       update: { minutes: r.minutes, enabled: true },
       create: {
         serviceId: svcByName[r.service],
-        size: r.size,
+        petSize: r.petSize,
         minutes: r.minutes,
         enabled: true,
       },
@@ -93,7 +96,7 @@ const main = async (consoleMessage: () => void) => {
     where: {
       ruleType: 'DAILY_SERVICE_LIMIT',
       serviceId: svcByName['bano_corte'],
-      size: null,
+      petSize: null,
     },
   });
 
@@ -118,7 +121,7 @@ const main = async (consoleMessage: () => void) => {
     where: {
       ruleType: 'DAILY_SIZE_LIMIT',
       serviceId: null,
-      size: 'LARGE',
+      petSize: 'LARGE',
     },
   });
 
@@ -131,7 +134,7 @@ const main = async (consoleMessage: () => void) => {
     await prisma.businessRule.create({
       data: {
         ruleType: 'DAILY_SIZE_LIMIT',
-        size: 'LARGE',
+        petSize: 'LARGE',
         maxPerDay: 2,
         enabled: true,
       },
