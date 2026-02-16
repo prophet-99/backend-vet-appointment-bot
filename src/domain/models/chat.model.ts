@@ -1,28 +1,11 @@
-import type { FlowMode } from './booking-store.model';
+import type { FlowMode, FlowStatusMode } from './booking-store.model';
 
-export type ChatTurnResponse =
-  | ChatTurnSuccessResponse
-  | ChatTurnHumanEscalationResponse
-  | ChatTurnIgnoredResponse;
-
-export interface ChatTurnSuccessResponse {
-  conversationId: string;
+export interface ChatTurnResponse {
   reply: string;
-  mode: Exclude<FlowMode, 'HUMAN'>;
+  mode: FlowMode;
+  statusMode: FlowStatusMode;
   stateExpiresInHours: number;
-  requestId: string;
-}
-
-export interface ChatTurnHumanEscalationResponse {
   conversationId: string;
-  reply: string;
-  mode: 'HUMAN';
-  stateExpiresInHours: number;
-}
-
-export interface ChatTurnIgnoredResponse {
-  conversationId: string;
-  reply: string;
-  ignored: true;
-  reason: string;
+  ignored: boolean;
+  reason?: string;
 }

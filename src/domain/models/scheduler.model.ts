@@ -1,4 +1,3 @@
-import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 import { PetSize } from '@domain/enums/pet-size.enum';
 
 // ========== GET AVAILABILITY ==========
@@ -14,7 +13,8 @@ export interface GetAvailabilityInput {
 export interface GetAvailabilityOutput {
   success: boolean;
   statusCode: number;
-  reason?: string;
+  errorCode?: string;
+  errorReason?: string;
   appointment?: {
     appointmentDay: Date;
     suggestedStart: string;
@@ -22,6 +22,15 @@ export interface GetAvailabilityOutput {
     requiredMinutes: number;
     services: Array<{ id: string; name: string }>;
   };
+}
+
+// ========== GET SERVICES ID BY NAME ==========
+export interface GetServicesIdByNameOutput {
+  success: boolean;
+  statusCode: number;
+  errorCode?: string;
+  errorReason?: string;
+  serviceIds?: string[];
 }
 
 // ========== CREATE APPOINTMENT ==========
@@ -32,8 +41,8 @@ export interface CreateAppointmentInput {
   ownerName: string;
   ownerPhone: string;
   petName: string;
-  size: PetSize;
-  breedText?: string;
+  petSize: PetSize;
+  petBreed?: string;
   notes?: string;
   serviceIds: string[];
   pendingTtlMinutes?: number;
@@ -42,7 +51,8 @@ export interface CreateAppointmentInput {
 export interface CreateAppointmentOutput {
   success: boolean;
   statusCode: number;
-  reason?: string;
+  errorCode?: string;
+  errorReason?: string;
   appointment?: {
     appointmentId: string;
     appointmentDate: string; // YYYY-MM-DD
@@ -52,9 +62,9 @@ export interface CreateAppointmentOutput {
     ownerPhone: string;
     petName: string;
     petSize: string;
-    breedText: string | null;
+    petBreed: string;
     servicesName: string[];
-    notes: string | null;
+    notes: string;
     status: string;
   };
 }
@@ -63,6 +73,8 @@ export interface CreateAppointmentOutput {
 export interface GetAppointmentOutput {
   success: boolean;
   statusCode: number;
+  errorCode?: string;
+  errorReason?: string;
   appointment?: {
     appointmentId: string;
     appointmentDate: string; // YYYY-MM-DD
@@ -72,19 +84,19 @@ export interface GetAppointmentOutput {
     ownerPhone: string;
     petName: string;
     petSize: string;
-    breedText: string | null;
+    petBreed: string;
     servicesName: string[];
-    notes: string | null;
+    notes: string;
     status: string;
   };
-  reason?: string;
 }
 
 // ========== CANCEL APPOINTMENT ==========
 export interface CancelAppointmentOutput {
   success: boolean;
   statusCode: number;
-  reason?: string;
+  errorCode?: string;
+  errorReason?: string;
 }
 
 export interface Scheduler {
@@ -94,9 +106,12 @@ export interface Scheduler {
     params: CreateAppointmentInput
   ): Promise<CreateAppointmentOutput>;
 
-  getServicesIdByNames(names: string[]): Promise<string[]>;
+  getServicesIdByNames(names: string[]): Promise<GetServicesIdByNameOutput>;
 
   getAppointment(appointmentId: string): Promise<GetAppointmentOutput>;
 
-  cancelAppointment(appointmentId: string): Promise<CancelAppointmentOutput>;
+  cancelAppointment(
+    appointmentId: string,
+    reason?: string
+  ): Promise<CancelAppointmentOutput>;
 }

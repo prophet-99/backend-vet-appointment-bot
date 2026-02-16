@@ -1,31 +1,45 @@
 import { PetSize } from '@domain/enums/pet-size.enum';
 
-export type FlowMode =
-  | 'WELCOME'
-  | 'INFO'
-  | 'CREATE'
-  | 'EDIT'
-  | 'DELETE'
-  | 'GET'
-  | 'HUMAN';
+
+export enum FlowMode {
+  WELCOME = 'WELCOME',
+  CREATE = 'CREATE',
+  EDIT = 'EDIT',
+  DELETE = 'DELETE',
+  INFO = 'INFO',
+  HUMAN = 'HUMAN',
+}
+
+export enum FlowStatusMode {
+  INITIAL = 'INITIAL',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  ERROR = 'ERROR',
+}
+
+export enum FlowStatusAI {
+  COLLECTING = 'COLLECTING',
+  READY_TO_SEARCH = 'READY_TO_SEARCH',
+  SEARCHING = 'SEARCHING',
+  DONE = 'DONE',
+}
 
 export interface BookingState {
   conversationId: string;
   mode: FlowMode;
-  lastUserText?: string;
-  lastBotText?: string;
+  statusMode: FlowStatusMode;
+  statusAI: FlowStatusAI;
+  showGreeting: boolean;
+  expiresAt: Date;
+  lastUserText: string;
+  lastBotText: string;
   preferredDate?: string; // ISO string: "YYYY-MM-DD"
   preferredTime?: string; // "HH:MM"
-  appointmentDate?: string; // ISO string: "YYYY-MM-DD"
-  appointmentStartTime?: string; // "HH:MM"
-  appointmentEndTime?: string; // "HH:MM"
-  ownerName?: string;
   petName?: string;
   petSize?: PetSize;
-  breedText?: string;
+  petBreed?: string;
   notes?: string;
   servicesName?: string[];
-  expiresAt?: Date;
 }
 
 export interface BookingStore {

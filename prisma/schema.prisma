@@ -71,7 +71,7 @@ model BusinessRule {
 
   ruleType    RuleType  @map("rule_type")
   serviceId   String?   @map("service_id")
-  size        PetSize?
+  petSize     PetSize?  @map("pet_size")
   maxPerDay   Int       @map("max_per_day")
 
   enabled     Boolean   @default(true)
@@ -80,7 +80,7 @@ model BusinessRule {
   
   service     Service?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   
-  @@unique([ruleType, serviceId, size])
+  @@unique([ruleType, serviceId, petSize])
   @@map("business_rule")
 }
 
@@ -88,7 +88,7 @@ model DurationRule {
   id        String  @id @default(cuid())
   serviceId String  @map("service_id")
 
-  size      PetSize
+  petSize   PetSize @map("pet_size")
   minutes   Int
 
   enabled   Boolean @default(true)
@@ -97,30 +97,32 @@ model DurationRule {
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  @@unique([serviceId, size])
-  @@index([serviceId, size])
+  @@unique([serviceId, petSize])
+  @@index([serviceId, petSize])
   @@map("duration_rule")
 }
 
 model Appointment {
-  id            String            @id // Generado en aplicación: apt_XXXXXXXX (ej: apt_089ddfe4)
-  date          DateTime          // día normalizado
-  startTime     String            @map("start_time") // "HH:MM"
-  endTime       String            @map("end_time") // "HH:MM"
-  status        AppointmentStatus @default(PENDING)
-  expiresAt     DateTime          @map("expires_at")
+  id              String            @id // Generado en aplicación: apt_XXXXXXXX (ej: apt_089ddfe4)
+  date            DateTime          // día normalizado
+  startTime       String            @map("start_time") // "HH:MM"
+  endTime         String            @map("end_time") // "HH:MM"
+  status          AppointmentStatus @default(PENDING)
+  expiresAt       DateTime          @map("expires_at")
 
-  ownerName     String            @map("owner_name")
-  ownerPhone    String            @map("owner_phone")
-  petName       String            @map("pet_name")
-  size          PetSize
-  breedText     String?           @map("breed_text")
-  notes         String?
+  ownerName       String            @map("owner_name")
+  ownerPhone      String            @map("owner_phone")
+  petName         String            @map("pet_name")
+  petSize         PetSize           @map("pet_size")
+  petBreed        String            @map("pet_breed")
+  notes           String
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  cancelledReason String?           @map("cancelled_reason")
 
-  items         AppointmentItem[]
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  items           AppointmentItem[]
 
   @@index([date, status])
   @@map("appointment")
@@ -142,7 +144,10 @@ model AppointmentItem {
 
 model BookingState {
   conversationId String    @id @map("conversation_id")
-  mode           String    // "BOOKING" | "HUMAN"
+  mode           String
+  statusMode     String    @map("status_mode")
+  statusAI       String    @map("status_ai")
+  showGreeting   Boolean   @map("show_greeting")
   expiresAt      DateTime  @map("expires_at")
   
   // Campos opcionales del estado
@@ -150,13 +155,9 @@ model BookingState {
   lastBotText          String?   @map("last_bot_text")
   preferredDate        String?   @map("preferred_date") // ISO string (YYYY-MM-DD)
   preferredTime        String?   @map("preferred_time") // "HH:MM"
-  appointmentDate      String?   @map("appointment_date") // ISO string (YYYY-MM-DD)
-  appointmentStartTime String?   @map("appointment_start_time") // "HH:MM"
-  appointmentEndTime   String?   @map("appointment_end_time") // "HH:MM"
-  ownerName            String?   @map("owner_name")
   petName              String?   @map("pet_name")
   petSize              String?   @map("pet_size") // "SMALL" | "MEDIUM" | "LARGE"
-  breedText            String?   @map("breed_text")
+  petBreed             String?   @map("pet_breed")
   notes                String?
   servicesName         String[]  @default([]) @map("services_name")
 

@@ -1,29 +1,24 @@
-import { Scheduler } from './scheduler.model';
-import type { BookingState, FlowMode } from './booking-store.model';
+import type { Scheduler } from './scheduler.model';
+import type { BookingState } from './booking-store.model';
+
+import type { AIMergedResponseSchema } from './ai-schema.model';
 
 export interface AIProvider {
-  generateResponse(params: AIPromptRequest): Promise<AIResponse>;
-  detectPromptIntent(params: AIPromptIntentRequest): Promise<PromptIntent>;
+  generateResponse(params: AIRequest): Promise<AIResponse>;
 }
 
-export type PromptIntent = FlowMode;
-
-export interface AIPromptRequest {
-  user: {
-    prompt: string;
-    phoneNumber: string;
-    intent: PromptIntent;
-  };
+export interface AIRequest {
+  userName: string;
+  userPhoneNumber: string;
   bookingState: BookingState;
   schedulerService: Scheduler;
 }
 
-export interface AIPromptIntentRequest {
-  userPrompt: string;
-}
-
 export interface AIResponse {
-  text: string;
-  requestId?: string;
-  statePatch?: Partial<BookingState>;
+  requestId: string;
+  aiResponse: AIMergedResponseSchema | null;
+  statePatch: Partial<BookingState>;
+  statusCode: number;
+  errorCode?: string;
+  errorReason?: string;
 }
