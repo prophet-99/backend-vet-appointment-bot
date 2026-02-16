@@ -33,9 +33,9 @@ export class SchedulerRepository {
     return rows;
   }
 
-  async getDurations(servicesIds: string[], size: PetSize) {
+  async getDurations(servicesIds: string[], petSize: PetSize) {
     const rules = await prismaClient.durationRule.findMany({
-      where: { serviceId: { in: servicesIds }, size, enabled: true },
+      where: { serviceId: { in: servicesIds }, petSize, enabled: true },
       select: { serviceId: true, minutes: true },
     });
 
@@ -62,7 +62,7 @@ export class SchedulerRepository {
   async checkBusinessRules(
     day: Date,
     serviceIds: string[],
-    size: PetSize,
+    petSize: PetSize,
     now: Date
   ) {
     const rules = await prismaClient.businessRule.findMany({
@@ -73,13 +73,13 @@ export class SchedulerRepository {
             ruleType: RuleType.DAILY_SERVICE_LIMIT,
             serviceId: { in: serviceIds },
           },
-          { ruleType: RuleType.DAILY_SIZE_LIMIT, size },
+          { ruleType: RuleType.DAILY_SIZE_LIMIT, petSize },
         ],
       },
       select: {
         ruleType: true,
         serviceId: true,
-        size: true,
+        petSize: true,
         maxPerDay: true,
       },
     });
@@ -96,7 +96,7 @@ export class SchedulerRepository {
         ],
       },
       select: {
-        size: true,
+        petSize: true,
         items: { select: { serviceId: true } },
       },
     });
@@ -117,16 +117,16 @@ export class SchedulerRepository {
         }
       }
 
-      if (rule.ruleType === RuleType.DAILY_SIZE_LIMIT && rule.size) {
+      if (rule.ruleType === RuleType.DAILY_SIZE_LIMIT && rule.petSize) {
         const count = appointments.filter(
-          (apt) => apt.size === rule.size
+          (apt) => apt.petSize === rule.petSize
         ).length;
 
         if (count >= rule.maxPerDay) {
           return {
             allowed: false,
             reason: RuleType.DAILY_SIZE_LIMIT,
-            size: rule.size,
+            petSize: rule.petSize,
             maxPerDay: rule.maxPerDay,
           };
         }
@@ -143,8 +143,8 @@ export class SchedulerRepository {
     ownerName: string;
     ownerPhone: string;
     petName: string;
-    size: PetSize;
-    breedText?: string;
+    petSize: PetSize;
+    petBreed?: string;
     notes?: string;
     serviceIds: string[];
     expiresAt: Date;
@@ -197,8 +197,8 @@ export class SchedulerRepository {
           ownerName: input.ownerName,
           ownerPhone: input.ownerPhone,
           petName: input.petName,
-          size: input.size,
-          breedText: input.breedText ?? '',
+          petSize: input.petSize,
+          petBreed: input.petBreed ?? '',
           notes: input.notes ?? '',
 
           items: {
@@ -238,13 +238,16 @@ export class SchedulerRepository {
     });
   }
 
-  async updateAppointmentStatus(
-    appointmentId: string,
-    status: AppointmentStatus
-  ) {
+  async updateAppointmentStatus(input: {
+    appointmentId: string;
+    status: AppointmentStatus;
+    reason: string;
+  }) {
+    const { appointmentId, status, reason } = input;
+
     return prismaClient.appointment.update({
       where: { id: appointmentId },
-      data: { status },
+      data: { status, cancelledReason: reason },
     });
   }
 }

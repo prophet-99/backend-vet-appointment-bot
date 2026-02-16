@@ -5,3 +5,7 @@ export enum ServiceName {
   DEWORMING = 'desparacitacion',
   VACCINATION = 'vacuna',
 }
+
+export const getServiceNames: () => string[] = () => {
+  return Object.values(ServiceName);
+};

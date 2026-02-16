@@ -9,6 +9,7 @@ import {
   type GetAvailabilityOutput,
   type GetAppointmentOutput,
   type CancelAppointmentOutput,
+  type GetServicesIdByNameOutput,
 } from '@domain/models/scheduler.model';
 import {
   APPOINTMENT_CONFIG,
@@ -30,6 +31,7 @@ import {
   startOfDay,
 } from '@shared/utils/date.util';
 import { findFirstSlot, mergeIntervals } from '@shared/utils/interval.util';
+import { getServiceNames } from '@domain/enums/service-name.enum';
 
 export class SchedulerService implements Scheduler {
   constructor(private schedulerRepository: SchedulerRepository) {}
@@ -79,8 +81,9 @@ export class SchedulerService implements Scheduler {
     if (!parseResult.success) {
       return {
         success: false,
-        statusCode: 400,
-        reason: parseResult.error,
+        statusCode: ErrorCodes.PARSED_DATE_INVALID.statusCode,
+        errorCode: ErrorCodes.PARSED_DATE_INVALID.code,
+        errorReason: ErrorCodes.PARSED_DATE_INVALID.message,
       };
     }
     const { date: appointmentDay, preferredStartMinutes } = parseResult;
@@ -90,7 +93,8 @@ export class SchedulerService implements Scheduler {
       return {
         success: false,
         statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
-        reason: ErrorCodes.GREATHER_THAN_NOW.message,
+        errorCode: ErrorCodes.GREATHER_THAN_NOW.code,
+        errorReason: ErrorCodes.GREATHER_THAN_NOW.message,
       };
     }
 
@@ -101,7 +105,8 @@ export class SchedulerService implements Scheduler {
       return {
         success: false,
         statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
-        reason: ErrorCodes.GREATHER_THAN_NOW.message,
+        errorCode: ErrorCodes.GREATHER_THAN_NOW.code,
+        errorReason: ErrorCodes.GREATHER_THAN_NOW.message,
       };
     }
 
@@ -115,7 +120,8 @@ export class SchedulerService implements Scheduler {
       return {
         success: false,
         statusCode: ErrorCodes.SERVICE_NOT_FOUND.statusCode,
-        reason: ErrorCodes.SERVICE_NOT_FOUND.message,
+        errorCode: ErrorCodes.SERVICE_NOT_FOUND.code,
+        errorReason: ErrorCodes.SERVICE_NOT_FOUND.message,
       };
     }
 
@@ -129,7 +135,8 @@ export class SchedulerService implements Scheduler {
       return {
         success: false,
         statusCode: ErrorCodes.DURATION_RULES_MISSING.statusCode,
-        reason: ErrorCodes.DURATION_RULES_MISSING.message,
+        errorCode: ErrorCodes.DURATION_RULES_MISSING.code,
+        errorReason: ErrorCodes.DURATION_RULES_MISSING.message,
       };
     }
 
@@ -146,7 +153,8 @@ export class SchedulerService implements Scheduler {
       return {
         success: false,
         statusCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.statusCode,
-        reason: `${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message} [${servicesName}]`,
+        errorCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.code,
+        errorReason: `${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message} [${servicesName}]`,
       };
     }
 
@@ -247,7 +255,8 @@ export class SchedulerService implements Scheduler {
     return {
       success: false,
       statusCode: ErrorCodes.NO_AVAILABILITY.statusCode,
-      reason: ErrorCodes.NO_AVAILABILITY.message,
+      errorCode: ErrorCodes.NO_AVAILABILITY.code,
+      errorReason: ErrorCodes.NO_AVAILABILITY.message,
     };
   }
 
@@ -279,8 +288,8 @@ export class SchedulerService implements Scheduler {
           ownerName: params.ownerName,
           ownerPhone: params.ownerPhone,
           petName: params.petName,
-          size: params.size,
-          breedText: params.breedText,
+          petSize: params.petSize,
+          petBreed: params.petBreed,
           notes: params.notes,
           serviceIds: params.serviceIds,
           expiresAt: this.computeExpiresAt(nowInLima()),
@@ -304,8 +313,8 @@ export class SchedulerService implements Scheduler {
           ownerName: appointment.ownerName,
           ownerPhone: appointment.ownerPhone,
           petName: appointment.petName,
-          petSize: appointment.size,
-          breedText: appointment.breedText ?? null,
+          petSize: appointment.petSize,
+          petBreed: appointment.petBreed ?? null,
           servicesName:
             appointment.items?.map((item) => item.service?.name) ?? [],
           notes: appointment.notes ?? null,
@@ -317,18 +326,39 @@ export class SchedulerService implements Scheduler {
         return {
           success: false,
           statusCode: ErrorCodes.APPOINTMENT_SLOT_CONFLICT.statusCode,
-          reason: ErrorCodes.APPOINTMENT_SLOT_CONFLICT.message,
+          errorCode: ErrorCodes.APPOINTMENT_SLOT_CONFLICT.code,
+          errorReason: ErrorCodes.APPOINTMENT_SLOT_CONFLICT.message,
         };
       }
 
-      throw error;
+      return {
+        success: false,
+        statusCode: ErrorCodes.CREATE_APPOINTMENT_FAILED.statusCode,
+        errorCode: ErrorCodes.CREATE_APPOINTMENT_FAILED.code,
+        errorReason: ErrorCodes.CREATE_APPOINTMENT_FAILED.message,
+      };
     }
   }
 
-  async getServicesIdByNames(names: string[]): Promise<string[]> {
+  async getServicesIdByNames(
+    names: string[]
+  ): Promise<GetServicesIdByNameOutput> {
+    if (!names.every((n) => getServiceNames().includes(n))) {
+      return {
+        success: false,
+        statusCode: ErrorCodes.SERVICE_INTERPRETATION_FAILED.statusCode,
+        errorCode: ErrorCodes.SERVICE_INTERPRETATION_FAILED.code,
+        errorReason: ErrorCodes.SERVICE_INTERPRETATION_FAILED.message,
+      };
+    }
+
     const services = await this.schedulerRepository.getServiceIdsByNames(names);
 
-    return services.map((s) => s.id);
+    return {
+      success: true,
+      statusCode: 200,
+      serviceIds: services.map((s) => s.id),
+    };
   }
 
   async getAppointment(appointmentId: string): Promise<GetAppointmentOutput> {
@@ -339,8 +369,9 @@ export class SchedulerService implements Scheduler {
       if (!appointment) {
         return {
           success: false,
-          statusCode: 404,
-          reason: 'Cita no encontrada',
+          statusCode: ErrorCodes.APPOINTMENT_NOT_FOUND.statusCode,
+          errorCode: ErrorCodes.APPOINTMENT_NOT_FOUND.code,
+          errorReason: ErrorCodes.APPOINTMENT_NOT_FOUND.message,
         };
       }
 
@@ -359,8 +390,8 @@ export class SchedulerService implements Scheduler {
           ownerName: appointment.ownerName,
           ownerPhone: appointment.ownerPhone,
           petName: appointment.petName,
-          petSize: appointment.size,
-          breedText: appointment.breedText,
+          petSize: appointment.petSize,
+          petBreed: appointment.petBreed,
           servicesName: appointment.items.map((item) => item.service.name),
           notes: appointment.notes,
           status: appointment.status,
@@ -369,14 +400,16 @@ export class SchedulerService implements Scheduler {
     } catch (error: any) {
       return {
         success: false,
-        statusCode: 500,
-        reason: 'Error al obtener cita',
+        statusCode: ErrorCodes.GET_APPOINTMENT_FAILED.statusCode,
+        errorCode: ErrorCodes.GET_APPOINTMENT_FAILED.code,
+        errorReason: ErrorCodes.GET_APPOINTMENT_FAILED.message,
       };
     }
   }
 
   async cancelAppointment(
-    appointmentId: string
+    appointmentId: string,
+    reason: string
   ): Promise<CancelAppointmentOutput> {
     try {
       const appointment =
@@ -385,24 +418,27 @@ export class SchedulerService implements Scheduler {
       if (!appointment) {
         return {
           success: false,
-          statusCode: 404,
-          reason: 'Cita no encontrada',
+          statusCode: ErrorCodes.APPOINTMENT_NOT_FOUND.statusCode,
+          errorCode: ErrorCodes.APPOINTMENT_NOT_FOUND.code,
+          errorReason: ErrorCodes.APPOINTMENT_NOT_FOUND.message,
         };
       }
 
       if (appointment.status === 'CANCELLED') {
         return {
           success: false,
-          statusCode: 400,
-          reason: 'Esta cita ya estaba cancelada',
+          statusCode: ErrorCodes.APPOINTMENT_ALREADY_CANCELLED.statusCode,
+          errorCode: ErrorCodes.APPOINTMENT_ALREADY_CANCELLED.code,
+          errorReason: ErrorCodes.APPOINTMENT_ALREADY_CANCELLED.message,
         };
       }
 
       // Cambiar estado a CANCELLED
-      await this.schedulerRepository.updateAppointmentStatus(
+      await this.schedulerRepository.updateAppointmentStatus({
         appointmentId,
-        'CANCELLED'
-      );
+        status: 'CANCELLED',
+        reason,
+      });
 
       return {
         success: true,
@@ -411,8 +447,9 @@ export class SchedulerService implements Scheduler {
     } catch (error: any) {
       return {
         success: false,
-        statusCode: 500,
-        reason: 'Error al cancelar cita',
+        statusCode: ErrorCodes.CANCEL_APPOINTMENT_FAILED.statusCode,
+        errorCode: ErrorCodes.CANCEL_APPOINTMENT_FAILED.code,
+        errorReason: ErrorCodes.CANCEL_APPOINTMENT_FAILED.message,
       };
     }
   }
