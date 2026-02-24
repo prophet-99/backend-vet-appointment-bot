@@ -1,4 +1,16 @@
 export const ErrorCodes = {
+  USER_INTENT_NOT_IDENTIFIED: {
+    code: 'USER_INTENT_NOT_IDENTIFIED',
+    statusCode: 200,
+    message:
+      'Se ignora el mensaje porque no se pudo identificar la intención del usuario.',
+  },
+  HUMAN_ESCALATION_IGNORED: {
+    code: 'HUMAN_ESCALATION_IGNORED',
+    statusCode: 200,
+    message:
+      'Se ignora el mensaje porque el cliente ha solicitado hablar con un humano.',
+  },
   APPOINTMENT_SLOT_CONFLICT: {
     code: 'APPOINTMENT_SLOT_CONFLICT',
     statusCode: 409,

@@ -1,24 +1,37 @@
 import { PetSize } from '@domain/enums/pet-size.enum';
 
-export type FlowMode =
-  | 'WELCOME'
-  | 'CREATE'
-  | 'EDIT'
-  | 'DELETE'
-  | 'INFO'
-  | 'HUMAN';
+export enum FlowMode {
+  WELCOME = 'WELCOME',
+  CREATE = 'CREATE',
+  EDIT = 'EDIT',
+  DELETE = 'DELETE',
+  INFO = 'INFO',
+  HUMAN = 'HUMAN',
+}
 
-export type FlowStatusMode = 'INITIAL' | 'IN_PROGRESS' | 'COMPLETED' | 'ERROR';
+export enum FlowModeStatus {
+  INITIAL = 'INITIAL',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  ERROR = 'ERROR',
+}
+
+export enum FlowAIStatus {
+  COLLECTING = 'COLLECTING',
+  RUNNING = 'RUNNING',
+  DONE = 'DONE',
+}
 
 export interface BookingState {
   conversationId: string;
   mode: FlowMode;
-  statusMode: FlowStatusMode;
-  toolCall;
+  modeStatus: FlowModeStatus;
+  aiStatus: FlowAIStatus;
   showGreeting: boolean;
   expiresAt: Date;
   lastUserText: string;
   lastBotText: string;
+
   preferredDate?: string; // ISO string: "YYYY-MM-DD"
   preferredTime?: string; // "HH:MM"
   petName?: string;
@@ -26,6 +39,9 @@ export interface BookingState {
   petBreed?: string;
   notes?: string;
   servicesName?: string[];
+
+  appointmentId?: string;
+  cancelledReason?: string;
 }
 
 export interface BookingStore {

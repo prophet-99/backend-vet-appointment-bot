@@ -7,17 +7,20 @@ import type {
   AIRequest,
   AIResponse,
 } from '@domain/models/ai-provider.model';
-import type { BookingState } from '@domain/models/booking-store.model';
+import {
+  FlowMode,
+  type BookingState,
+} from '@domain/models/booking-store.model';
 import { openAIClient } from '@infraestructure/ai/open-ai.client';
 import {
-  AI_CANCEL_RESPONSE_SCHEMA,
-  AI_CREATE_RESPONSE_SCHEMA,
-  AI_AVAILABILITY_RESPONSE_SCHEMA,
-  AI_COLLECTOR_RESPONSE_SCHEMA,
+  AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA,
+  AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA,
+  AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
   type AIMergedResponseSchema,
+  getAISchemaResponse,
 } from '@domain/models/ai-schema.model';
 import {
-  getSystemPromptByIntent,
+  getSystemPrompt,
   getUserPrompt,
 } from '@infraestructure/ai/open-ai.prompt';
 import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
@@ -35,8 +38,8 @@ type OpenAIParsedResponseType = OpenAIParsedResponse<AIMergedResponseSchema> & {
 
 export class OpenAIProviderOrchestrator implements AIProvider {
   private buildUserStateSummary(bookingState: BookingState): string {
-    return `
-      mode=${bookingState.mode}
+    const createStatus = `
+      aiStatus=${bookingState.aiStatus}
       lastUserText=${bookingState.lastUserText ?? ''}
       lastBotText=${bookingState.lastBotText ?? ''}
       preferredDate=${bookingState.preferredDate ?? ''}
@@ -47,6 +50,20 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       notes=${bookingState.notes ?? ''}
       servicesName=${bookingState.servicesName?.join(',') ?? ''}
     `.trim();
+    const deleteStatus = `
+      aiStatus=${bookingState.aiStatus}
+      lastUserText=${bookingState.lastUserText ?? ''}
+      lastBotText=${bookingState.lastBotText ?? ''}
+      appointmentId=${bookingState.appointmentId ?? ''}
+      cancelledReason=${bookingState.cancelledReason ?? ''}
+    `.trim();
+
+    return (
+      {
+        [FlowMode.CREATE]: createStatus,
+        [FlowMode.DELETE]: deleteStatus,
+      } as Record<string, string>
+    )[bookingState.mode];
   }
 
   private async createAIResponse(params: {
@@ -74,10 +91,8 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     previousResponseId: string;
     toolOutputs: any[];
     zodFormatResponse: any;
-    systemPrompt: string;
   }): Promise<OpenAIParsedResponseType> {
-    const { previousResponseId, toolOutputs, zodFormatResponse, systemPrompt } =
-      params;
+    const { previousResponseId, toolOutputs, zodFormatResponse } = params;
 
     return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
@@ -85,38 +100,9 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       top_p: env.OPENAI_TOP_P,
       max_output_tokens: env.OPENAI_MAX_TOKENS,
       previous_response_id: previousResponseId,
-      input: [{ role: 'system', content: systemPrompt }, ...toolOutputs],
+      input: [...toolOutputs],
       text: { format: zodFormatResponse },
     });
-  }
-
-  private getToolStage() {
-    const TOOL_STAGE: Record<
-      ToolName,
-      { systemPrompt: string; zodFormatResponse: any }
-    > = {
-      getAvailability: {
-        systemPrompt: SYSTEM_PROMPT_GET_AVAILABILITY,
-        zodFormatResponse: zodTextFormat(
-          GET_AVAILABILITY_SCHEMA,
-          'get_availability'
-        ),
-      },
-      createAppointment: {
-        systemPrompt: SYSTEM_PROMPT_CREATE_APPOINTMENT,
-        zodFormatResponse: zodTextFormat(
-          CREATE_APPOINTMENT_SCHEMA,
-          'create_appointment'
-        ),
-      },
-      cancelAppointment: {
-        systemPrompt: SYSTEM_PROMPT_CANCEL_APPOINTMENT,
-        zodFormatResponse: zodTextFormat(
-          CANCEL_APPOINTMENT_SCHEMA,
-          'cancel_appointment'
-        ),
-      },
-    };
   }
 
   private async runAndExecuteIATools(params: {
@@ -194,7 +180,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
           });
 
           zodFormatResponse = zodTextFormat(
-            AI_AVAILABILITY_RESPONSE_SCHEMA,
+            AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA,
             'booking_state'
           );
           toolOutputs.push({
@@ -253,7 +239,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
           });
 
           zodFormatResponse = zodTextFormat(
-            AI_CREATE_RESPONSE_SCHEMA,
+            AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA,
             'booking_state'
           );
           toolOutputs.push({
@@ -264,9 +250,20 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         }
 
         if (name === 'cancelAppointment') {
+          if (!args.appointmentId) {
+            const missingError = ErrorCodes.MISSING_REQUIRED_PARAMETERS;
+
+            throw new Error(missingError.code, {
+              cause: {
+                statusCode: missingError.statusCode,
+                errorReason: `${missingError.message}: [appointmentId]`,
+              },
+            });
+          }
+
           const appointmentCancelled = await schedulerService.cancelAppointment(
             args.appointmentId,
-            args?.reason || 'Sin motivo especificado'
+            args?.cancelledReason || 'Sin motivo especificado'
           );
 
           if (!appointmentCancelled.success) {
@@ -279,7 +276,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
           }
 
           zodFormatResponse = zodTextFormat(
-            AI_CANCEL_RESPONSE_SCHEMA,
+            AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
             'booking_state'
           );
           toolOutputs.push({
@@ -294,7 +291,6 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         previousResponseId: toolsResponse.id,
         toolOutputs,
         zodFormatResponse,
-        systemPrompt: getSystemPromptByTool(name),
       });
     }
 
@@ -309,7 +305,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     if (
       aiResponse &&
       validReply(aiResponse?.botReply) &&
-      validReply(aiResponse?.flowStatus)
+      validReply(aiResponse?.aiStatus)
     ) {
       return aiResponse;
     }
@@ -325,28 +321,23 @@ export class OpenAIProviderOrchestrator implements AIProvider {
   async generateResponse(params: AIRequest): Promise<AIResponse> {
     try {
       const { bookingState } = params;
+      const systemConstruct = {
+        userIntent: bookingState.mode,
+        aiStatus: bookingState.aiStatus,
+      };
+      const userConstruct = {
+        state: this.buildUserStateSummary(bookingState),
+        userInput: bookingState.lastUserText,
+      };
 
-      const systemPrompt = getSystemPromptByIntent(bookingState.mode);
-      const userPrompt = getUserPrompt(
-        this.buildUserStateSummary(bookingState),
-        bookingState.lastUserText
-      );
+      const schemaResponse = getAISchemaResponse(systemConstruct);
+      const systemPrompt = getSystemPrompt(systemConstruct);
+      const userPrompt = getUserPrompt(userConstruct);
 
-      if (bookingState.toolCall === 'getAvailibity') {
-        // CARGO PROMPT PARA ESTAR ATENTO A LA REPSUESTA DEL USUARIO -> SIQ UEIRE O SI DESEA OTRA FECHA
-        // SI DESEA OTRA el toolCall === '
-      }
-
-      if (bookingState.toolCall === 'createAppointment') {
-        // RESPONDE QUE ESTA OK
-      }
       const initialAIResponse = await this.createAIResponse({
         systemPrompt,
         userPrompt,
-        zodFormatResponse: zodTextFormat(
-          AI_COLLECTOR_RESPONSE_SCHEMA,
-          'booking_state'
-        ),
+        zodFormatResponse: zodTextFormat(schemaResponse, 'booking_state'),
       });
 
       const { toolsResponse, statePatch } = await this.runAndExecuteIATools({

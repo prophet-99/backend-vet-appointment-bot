@@ -145,13 +145,14 @@ model AppointmentItem {
 model BookingState {
   conversationId String    @id @map("conversation_id")
   mode           String
-  statusMode     String    @map("status_mode")
+  modeStatus     String    @map("mode_status")
+  aiStatus       String    @map("ai_status")
   showGreeting   Boolean   @map("show_greeting")
   expiresAt      DateTime  @map("expires_at")
+  lastUserText   String?   @map("last_user_text")
+  lastBotText    String?   @map("last_bot_text")
   
-  // Campos opcionales del estado
-  lastUserText         String?   @map("last_user_text")
-  lastBotText          String?   @map("last_bot_text")
+  // Campos opcionales del estado [CREATE]
   preferredDate        String?   @map("preferred_date") // ISO string (YYYY-MM-DD)
   preferredTime        String?   @map("preferred_time") // "HH:MM"
   petName              String?   @map("pet_name")
@@ -159,6 +160,10 @@ model BookingState {
   petBreed             String?   @map("pet_breed")
   notes                String?
   servicesName         String[]  @default([]) @map("services_name")
+
+  // Campos opcionales del estado [DELETE]
+  appointmentId        String?   @map("appointment_id")
+  cancelledReason      String?   @map("cancelled_reason")
 
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

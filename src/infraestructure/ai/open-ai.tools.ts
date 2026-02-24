@@ -71,7 +71,7 @@ export const OPEN_AI_TOOLS = [
           type: 'string',
           description: 'ID único de la cita a cancelar (formato: apt_xxxxx)',
         },
-        reason: {
+        cancelledReason: {
           type: 'string',
           description: 'Motivo de la cancelación (opcional)',
         },

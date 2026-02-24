@@ -1,15 +1,16 @@
 import { DateTime } from 'luxon';
 
-import type {
+import {
   BookingState,
   BookingStore,
   FlowMode,
+  FlowAIStatus,
+  FlowModeStatus,
 } from '@domain/models/booking-store.model';
 import type { ChatTurnResponse } from '@domain/models/chat.model';
 import type { AIProvider } from '@domain/models/ai-provider.model';
 import type { Scheduler } from '@domain/models/scheduler.model';
 import { InteractionOption } from '@domain/enums/interaction-option.enum';
-import { AIStatus } from '@domain/models/ai-schema.model';
 import { nowInLima } from '@shared/utils/date.util';
 import { patchBookingState } from '@shared/utils/state.util';
 import {
@@ -25,6 +26,7 @@ import {
   DELETE_BOOKING_MESSAGE,
   BOOKING_SUMMARY_MESSAGE,
 } from '@shared/symbols/conversation.contants';
+import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 
 export class ConversationService {
   constructor(
@@ -44,8 +46,9 @@ export class ConversationService {
 
     return {
       conversationId,
-      mode: 'WELCOME',
-      statusMode: 'INITIAL',
+      mode: FlowMode.WELCOME,
+      modeStatus: FlowModeStatus.INITIAL,
+      aiStatus: FlowAIStatus.COLLECTING,
       showGreeting: true,
       expiresAt,
       lastUserText: '',
@@ -65,31 +68,32 @@ export class ConversationService {
       ? { ...prevState }
       : this.newState(params.conversationId);
 
-    let userIntent: FlowMode = 'WELCOME';
+    let userIntent: FlowMode = FlowMode.WELCOME;
     if (params.userSelectionId) {
       userIntent = {
-        [InteractionOption.MENU_SHOW_OPTIONS]: 'WELCOME',
-        [InteractionOption.MENU_CREATE]: 'CREATE',
-        [InteractionOption.MENU_EDIT]: 'EDIT',
-        [InteractionOption.MENU_CANCEL]: 'DELETE',
-        [InteractionOption.MENU_INFO]: 'INFO',
-        [InteractionOption.MENU_HUMAN]: 'HUMAN',
+        [InteractionOption.MENU_SHOW_OPTIONS]: FlowMode.WELCOME,
+        [InteractionOption.MENU_CREATE]: FlowMode.CREATE,
+        [InteractionOption.MENU_EDIT]: FlowMode.EDIT,
+        [InteractionOption.MENU_CANCEL]: FlowMode.DELETE,
+        [InteractionOption.MENU_INFO]: FlowMode.INFO,
+        [InteractionOption.MENU_HUMAN]: FlowMode.HUMAN,
       }[params.userSelectionId] as FlowMode;
 
-      state.statusMode = 'INITIAL';
+      state.modeStatus = FlowModeStatus.INITIAL;
+      state.aiStatus = FlowAIStatus.COLLECTING;
     }
     if (prevState && !params.userSelectionId) {
       userIntent = prevState.mode;
     }
 
-    if (userIntent === 'WELCOME') {
+    if (userIntent === FlowMode.WELCOME) {
       const stateToPatch = { ...state };
 
       stateToPatch.lastUserText = params.userMessage;
 
-      if (state.statusMode === 'INITIAL') {
-        stateToPatch.mode = 'WELCOME';
-        stateToPatch.statusMode = 'IN_PROGRESS';
+      if (state.modeStatus === FlowModeStatus.INITIAL) {
+        stateToPatch.mode = FlowMode.WELCOME;
+        stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
         stateToPatch.lastBotText = state.showGreeting ? WELCOME_MESSAGE : '';
         stateToPatch.showGreeting = false;
         // TODO: DELETE THIS COMMENT:
@@ -100,7 +104,7 @@ export class ConversationService {
          * */
       }
 
-      if (state.statusMode === 'IN_PROGRESS') {
+      if (state.modeStatus === FlowModeStatus.IN_PROGRESS) {
         stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
         // TODO: DELETE THIS COMMENT:
         /**
@@ -113,27 +117,28 @@ export class ConversationService {
       await this.bookingStoreService.upsert(stateToPatch);
 
       return {
-        reply: stateToPatch.lastBotText,
-        mode: stateToPatch.mode,
-        statusMode: stateToPatch.statusMode,
-        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+        statusCode: 200,
         conversationId: stateToPatch.conversationId,
+        botReply: stateToPatch.lastBotText,
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
         ignored: false,
       };
     }
 
-    if (userIntent === 'INFO') {
+    if (userIntent === FlowMode.INFO) {
       const stateToPatch = { ...state };
 
       stateToPatch.lastUserText = params.userMessage;
 
-      if (state.statusMode === 'INITIAL') {
-        stateToPatch.mode = 'INFO';
-        stateToPatch.statusMode = 'IN_PROGRESS';
+      if (state.modeStatus === FlowModeStatus.INITIAL) {
+        stateToPatch.mode = FlowMode.INFO;
+        stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
         stateToPatch.lastBotText = VET_DETAILS_MESSAGE;
       }
 
-      if (state.statusMode === 'IN_PROGRESS') {
+      if (state.modeStatus === FlowModeStatus.IN_PROGRESS) {
         stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
         // TODO: DELETE THIS COMMENT:
         /**
@@ -154,74 +159,86 @@ export class ConversationService {
        * 5) n8n -> Si el cliente elige "Hablar con la Dra." -> RESPONDE con el mode: 'HUMAN' y vuelve al paso 1
        * */
       return {
-        reply: stateToPatch.lastBotText,
-        mode: stateToPatch.mode,
-        statusMode: stateToPatch.statusMode,
-        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+        statusCode: 200,
         conversationId: stateToPatch.conversationId,
+        botReply: stateToPatch.lastBotText,
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
         ignored: false,
       };
     }
 
-    if (userIntent === 'HUMAN') {
+    if (userIntent === FlowMode.HUMAN) {
       const stateToPatch = { ...state };
 
       stateToPatch.lastUserText = params.userMessage;
 
-      if (state.statusMode === 'INITIAL') {
-        stateToPatch.mode = 'HUMAN';
-        stateToPatch.statusMode = 'IN_PROGRESS';
+      if (state.modeStatus === FlowModeStatus.INITIAL) {
+        stateToPatch.mode = FlowMode.HUMAN;
+        stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
         stateToPatch.lastBotText = HUMAN_ESCALATION_MESSAGE;
       }
 
-      if (state.statusMode === 'IN_PROGRESS') {
+      if (state.modeStatus === FlowModeStatus.IN_PROGRESS) {
         return {
-          reply: '',
-          mode: stateToPatch.mode,
-          statusMode: stateToPatch.statusMode,
-          stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+          statusCode: ErrorCodes.HUMAN_ESCALATION_IGNORED.statusCode,
           conversationId: stateToPatch.conversationId,
+          botReply: '',
+          mode: stateToPatch.mode,
+          modeStatus: stateToPatch.modeStatus,
+          stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
           ignored: true,
-          reason:
-            'Se ignora el mensaje porque el cliente ha solicitado hablar con un humano.',
+          reason: ErrorCodes.HUMAN_ESCALATION_IGNORED.message,
         };
       }
 
       await this.bookingStoreService.upsert(stateToPatch);
 
       return {
-        reply: stateToPatch.lastBotText,
-        mode: stateToPatch.mode,
-        statusMode: stateToPatch.statusMode,
-        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+        statusCode: 200,
         conversationId: stateToPatch.conversationId,
+        botReply: stateToPatch.lastBotText,
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
         ignored: false,
       };
     }
 
-    if (userIntent === 'CREATE') {
+    if (userIntent === FlowMode.CREATE) {
       let stateToPatch = { ...state };
+      let responseStatus = 200;
 
       stateToPatch.lastUserText = params.userMessage;
 
-      if (state.statusMode === 'INITIAL') {
-        stateToPatch.mode = 'CREATE';
-        stateToPatch.statusMode = 'IN_PROGRESS';
+      if (state.modeStatus === FlowModeStatus.INITIAL) {
+        stateToPatch.mode = FlowMode.CREATE;
+        stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
         stateToPatch.lastBotText = CREATE_BOOKING_MESSAGE;
       }
 
-      if (state.statusMode === 'IN_PROGRESS') {
-        const { aiResponse, statePatch: aiStatePatch } =
-          await this.aiProvider.generateResponse({
-            userName: params.userName,
-            userPhoneNumber: params.userPhoneNumber,
-            bookingState: { ...stateToPatch },
-            schedulerService: this.schedulerService,
-          });
+      if (state.modeStatus === FlowModeStatus.IN_PROGRESS) {
+        const {
+          aiResponse,
+          statePatch: aiStatePatch,
+          errorReason,
+          statusCode,
+        } = await this.aiProvider.generateResponse({
+          userName: params.userName,
+          userPhoneNumber: params.userPhoneNumber,
+          bookingState: { ...stateToPatch },
+          schedulerService: this.schedulerService,
+        });
         stateToPatch.lastBotText = aiResponse?.botReply ?? '';
 
-        if (aiResponse?.flowStatus === AIStatus.CREATE_APPOINTMENT) {
-          stateToPatch.statusMode = 'COMPLETED';
+        if (errorReason && statusCode) {
+          stateToPatch.lastBotText = errorReason;
+          responseStatus = statusCode;
+        }
+
+        if (aiResponse?.aiStatus === FlowAIStatus.DONE) {
+          stateToPatch.modeStatus = FlowModeStatus.COMPLETED;
           stateToPatch.lastBotText = BOOKING_SUMMARY_MESSAGE`${{
             appointmentId: aiResponse.appointmentId!,
             appointmentDate: aiResponse.appointmentDate!,
@@ -241,7 +258,7 @@ export class ConversationService {
         stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
       }
 
-      if (state.statusMode === 'COMPLETED') {
+      if (state.modeStatus === FlowModeStatus.COMPLETED) {
         stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
         // TODO: DELETE THIS COMMENT:
         /**
@@ -254,45 +271,56 @@ export class ConversationService {
       await this.bookingStoreService.upsert(stateToPatch);
 
       return {
-        reply: stateToPatch.lastBotText,
-        mode: stateToPatch.mode,
-        statusMode: stateToPatch.statusMode,
-        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+        statusCode: responseStatus,
         conversationId: stateToPatch.conversationId,
+        botReply: stateToPatch.lastBotText,
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
         ignored: false,
       };
     }
 
-    if (userIntent === 'DELETE') {
+    if (userIntent === FlowMode.DELETE) {
       let stateToPatch = { ...state };
+      let responseStatus = 200;
 
       stateToPatch.lastUserText = params.userMessage;
 
-      if (state.statusMode === 'INITIAL') {
-        stateToPatch.mode = 'DELETE';
-        stateToPatch.statusMode = 'IN_PROGRESS';
+      if (state.modeStatus === FlowModeStatus.INITIAL) {
+        stateToPatch.mode = FlowMode.DELETE;
+        stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
         stateToPatch.lastBotText = DELETE_BOOKING_MESSAGE;
       }
 
-      if (state.statusMode === 'IN_PROGRESS') {
-        const { aiResponse, statePatch: aiStatePatch } =
-          await this.aiProvider.generateResponse({
-            userName: params.userName,
-            userPhoneNumber: params.userPhoneNumber,
-            bookingState: { ...stateToPatch },
-            schedulerService: this.schedulerService,
-          });
+      if (state.modeStatus === FlowModeStatus.IN_PROGRESS) {
+        const {
+          aiResponse,
+          statePatch: aiStatePatch,
+          errorReason,
+          statusCode,
+        } = await this.aiProvider.generateResponse({
+          userName: params.userName,
+          userPhoneNumber: params.userPhoneNumber,
+          bookingState: { ...stateToPatch },
+          schedulerService: this.schedulerService,
+        });
         stateToPatch.lastBotText = aiResponse?.botReply ?? '';
 
-        if (aiResponse?.flowStatus === AIStatus.CANCEL_APPOINTMENT) {
-          stateToPatch.statusMode = 'COMPLETED';
+        if (errorReason && statusCode) {
+          stateToPatch.lastBotText = errorReason;
+          responseStatus = statusCode;
+        }
+
+        if (aiResponse?.aiStatus === FlowAIStatus.DONE) {
+          stateToPatch.modeStatus = FlowModeStatus.COMPLETED;
         }
 
         stateToPatch.expiresAt = this.calculateBookingExpiration();
         stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
       }
 
-      if (state.statusMode === 'COMPLETED') {
+      if (state.modeStatus === FlowModeStatus.COMPLETED) {
         stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
         // TODO: DELETE THIS COMMENT:
         /**
@@ -305,24 +333,25 @@ export class ConversationService {
       await this.bookingStoreService.upsert(stateToPatch);
 
       return {
-        reply: stateToPatch.lastBotText,
-        mode: stateToPatch.mode,
-        statusMode: stateToPatch.statusMode,
-        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
+        statusCode: responseStatus,
         conversationId: stateToPatch.conversationId,
+        botReply: stateToPatch.lastBotText,
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
         ignored: false,
       };
     }
 
     return {
-      reply: '',
+      statusCode: ErrorCodes.USER_INTENT_NOT_IDENTIFIED.statusCode,
       conversationId: state.conversationId,
+      botReply: '',
       mode: state.mode,
+      modeStatus: state.modeStatus,
       stateExpiresInHours: BOOKING_STORE_TTL_HOURS,
-      statusMode: state.statusMode,
       ignored: true,
-      reason:
-        'Se ignora el mensaje porque no se pudo identificar la intención del usuario.',
+      reason: ErrorCodes.USER_INTENT_NOT_IDENTIFIED.message,
     };
   }
 }

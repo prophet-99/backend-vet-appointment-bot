@@ -1,11 +1,12 @@
-import type { FlowMode, FlowStatusMode } from './booking-store.model';
+import type { FlowMode, FlowModeStatus } from './booking-store.model';
 
 export interface ChatTurnResponse {
-  reply: string;
-  mode: FlowMode;
-  statusMode: FlowStatusMode;
-  stateExpiresInHours: number;
+  statusCode: number;
   conversationId: string;
+  botReply: string;
+  mode: FlowMode;
+  modeStatus: FlowModeStatus;
+  stateExpiresInHours: number;
   ignored: boolean;
   reason?: string;
 }
