@@ -230,7 +230,9 @@ export class ConversationService {
           bookingState: { ...stateToPatch },
           schedulerService: this.schedulerService,
         });
+        stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
         stateToPatch.lastBotText = aiResponse?.botReply ?? '';
+        stateToPatch.expiresAt = this.calculateBookingExpiration();
 
         if (errorReason && statusCode) {
           stateToPatch.lastBotText = errorReason;
@@ -253,9 +255,6 @@ export class ConversationService {
             status: aiResponse.status!,
           }}`;
         }
-
-        stateToPatch.expiresAt = this.calculateBookingExpiration();
-        stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
       }
 
       if (state.modeStatus === FlowModeStatus.COMPLETED) {
@@ -305,7 +304,9 @@ export class ConversationService {
           bookingState: { ...stateToPatch },
           schedulerService: this.schedulerService,
         });
+        stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
         stateToPatch.lastBotText = aiResponse?.botReply ?? '';
+        stateToPatch.expiresAt = this.calculateBookingExpiration();
 
         if (errorReason && statusCode) {
           stateToPatch.lastBotText = errorReason;
@@ -315,9 +316,6 @@ export class ConversationService {
         if (aiResponse?.aiStatus === FlowAIStatus.DONE) {
           stateToPatch.modeStatus = FlowModeStatus.COMPLETED;
         }
-
-        stateToPatch.expiresAt = this.calculateBookingExpiration();
-        stateToPatch = patchBookingState(stateToPatch, aiStatePatch);
       }
 
       if (state.modeStatus === FlowModeStatus.COMPLETED) {

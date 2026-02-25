@@ -122,7 +122,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
     let statePatch = patchBookingState(
       bookingState,
-      aiResponse.output_parsed as Partial<BookingState>
+     aiResponse .output_parsed as Partial<BookingState>
     );
     let toolsResponse = aiResponse;
     let zodFormatResponse;
