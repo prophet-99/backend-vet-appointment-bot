@@ -40,7 +40,9 @@ app.get('/test/message/:message/intention/:userIntention', async (req, res) => {
       userName: conv.username,
       userMessage: conv.input,
       userPhoneNumber: conv.userPhoneNumber,
-      userSelectionId: InteractionOptionAdapter.toDomain(req.params.userIntention), // TODO: Remove this, only for testing purposes
+      userSelectionId: InteractionOptionAdapter.toDomain(
+        req.params?.userIntention
+      ), // TODO: Remove this, only for testing purposes
     });
     results.push({
       conversationId: conv.conversationId,

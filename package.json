@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "prisma:reset": "prisma migrate reset",
-    "prisma:migrate": "prisma migrate dev --name scheduler_v1.5.0",
+    "prisma:migrate": "prisma migrate dev --name scheduler_v1.6.0",
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed"
   },
