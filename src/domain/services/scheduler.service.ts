@@ -89,7 +89,10 @@ export class SchedulerService implements Scheduler {
     const { date: appointmentDay, preferredStartMinutes } = parseResult;
 
     //? 1) Validate grether than currentDate and time
-    if (appointmentDay! < nowInLima()) {
+    if (
+      appointmentDay!.toISOString().split('T')[0] <
+      nowInLima().toISOString().split('T')[0]
+    ) {
       return {
         success: false,
         statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,

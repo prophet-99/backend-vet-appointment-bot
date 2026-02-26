@@ -1,6 +1,5 @@
 export enum InteractionOption {
   MENU_CREATE = 'MENU_CREATE',
-  MENU_EDIT = 'MENU_EDIT',
   MENU_CANCEL = 'MENU_CANCEL',
   MENU_INFO = 'MENU_INFO',
   MENU_HUMAN = 'MENU_HUMAN',

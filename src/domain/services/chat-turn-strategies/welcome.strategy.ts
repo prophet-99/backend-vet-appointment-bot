@@ -1,6 +1,17 @@
-import { type BookingStore, FlowMode, FlowModeStatus } from "@domain/models/booking-store.model";
-import { MENU_SELECTION_REQUIRED_MESSAGE, WELCOME_MESSAGE } from "@shared/symbols/conversation.contants";
-import { type ChatTurnRequest, type ChatTurnResponse, ChatTurnStrategy } from "./chat-turn.strategy";
+import {
+  type BookingStore,
+  FlowMode,
+  FlowModeStatus,
+} from '@domain/models/booking-store.model';
+import {
+  MENU_SELECTION_REQUIRED_MESSAGE,
+  WELCOME_MESSAGE,
+} from '@shared/symbols/conversation.contants';
+import {
+  type ChatTurnRequest,
+  type ChatTurnResponse,
+  ChatTurnStrategy,
+} from './chat-turn.strategy';
 
 export class WelcomeStrategy extends ChatTurnStrategy {
   constructor(private bookingStoreService: BookingStore) {
@@ -16,7 +27,9 @@ export class WelcomeStrategy extends ChatTurnStrategy {
     if (bookingState.modeStatus === FlowModeStatus.INITIAL) {
       stateToPatch.mode = FlowMode.WELCOME;
       stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
-      stateToPatch.lastBotText = bookingState.showGreeting ? WELCOME_MESSAGE : '';
+      stateToPatch.lastBotText = bookingState.showGreeting
+        ? WELCOME_MESSAGE
+        : '';
       stateToPatch.showGreeting = false;
       // TODO: DELETE THIS COMMENT:
       /**
@@ -31,9 +44,9 @@ export class WelcomeStrategy extends ChatTurnStrategy {
       // TODO: DELETE THIS COMMENT:
       /**
        *! FLUJO DE ERROR - USUARIO NO SELECCIONA UNA OPCIÓN VÁLIDA DEL MENÚ
-        * 1) Se envía a n8n -> el mode: 'WELCOME' y lastBotText: ''
-        * 2) n8n responde con el "reply" al WhatsApp al cliente (concatenar + salto de línea)
-        * */
+       * 1) Se envía a n8n -> el mode: 'WELCOME' y lastBotText: ''
+       * 2) n8n responde con el "reply" al WhatsApp al cliente (concatenar + salto de línea)
+       * */
     }
 
     await this.bookingStoreService.upsert(stateToPatch);

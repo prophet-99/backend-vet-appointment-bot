@@ -65,6 +65,7 @@ export class InDBBookingStoreService implements BookingStore {
       .toJSDate();
     const stateWithExpiry = {
       ...state,
+      servicesName: state.servicesName ?? [],
       expiresAt: state.expiresAt ?? dateTimeNow,
       mode: state.mode ?? 'BOOKING',
     };

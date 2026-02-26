@@ -1,4 +1,11 @@
+import { DateTime } from 'luxon';
+
 import type { BookingState } from '@domain/models/booking-store.model';
+import {
+  APP_TIMEZONE,
+  BOOKING_STORE_TTL_HOURS,
+} from '@shared/symbols/business.constants';
+import { nowInLima } from './date.util';
 
 /**
  * Merges a partial BookingState patch into a current state object.
@@ -41,4 +48,10 @@ export const patchBookingState = <T extends Partial<BookingState>>(
   });
 
   return patchedState;
+};
+
+export const calculateBookingExpiration = (): Date => {
+  return DateTime.fromJSDate(nowInLima(), { zone: APP_TIMEZONE })
+    .plus({ hours: BOOKING_STORE_TTL_HOURS })
+    .toJSDate();
 };

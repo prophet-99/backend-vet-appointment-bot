@@ -3,7 +3,6 @@ import { PetSize } from '@domain/enums/pet-size.enum';
 export enum FlowMode {
   WELCOME = 'WELCOME',
   CREATE = 'CREATE',
-  EDIT = 'EDIT',
   DELETE = 'DELETE',
   INFO = 'INFO',
   HUMAN = 'HUMAN',
