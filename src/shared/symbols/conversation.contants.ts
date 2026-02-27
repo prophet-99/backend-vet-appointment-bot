@@ -42,9 +42,12 @@ const CREATE_BOOKING_MESSAGE = `¡Perfecto! 😊 Necesito algunos datos para pod
 • Servicios (baño, baño con corte, baño medicado, vacunación o desparasitación)
 • Alguna nota adicional
 
-Por favor, envíame esta información para continuar con tu reserva. ¡Gracias! 🐾`;
+👉 Si deseas agendar para más de una mascota, realiza la reserva de cada una por separado. Así podremos encontrar el mejor horario para cada perrito y darte una experiencia más personalizada 🐶✨
 
-const DELETE_BOOKING_MESSAGE = `¡Entiendo! 😊 Si deseas cancelar tu cita, por favor envíame el *número de reserva* para poder ubicarla en nuestro sistema y ayudarte con la cancelación. ¡Gracias por avisarnos! 🐾`;
+Envíame estos datos y seguimos con tu reserva. ¡Gracias! 🐾`;
+
+const DELETE_BOOKING_MESSAGE =
+  '¡Gracias por avisarnos! 😊 Para cancelar tu cita, solo necesito el *número de reserva*. Si deseas, puedes contarme el motivo de tu cancelación; eso nos ayudará a seguir mejorando. 🐾';
 
 function BOOKING_SUMMARY_MESSAGE(
   strings: TemplateStringsArray,

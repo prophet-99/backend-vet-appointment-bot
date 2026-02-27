@@ -21,7 +21,7 @@ export const AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA = z.object({
   botReply: z.string(),
   aiStatus: z.literal(FlowAIStatus.RUNNING),
 
-  appointmentDay: z.date(),
+  appointmentDay: z.string(),
   suggestedStart: z.string(),
   suggestedEnd: z.string(),
   requiredMinutes: z.number(),
@@ -89,7 +89,7 @@ export const AI_DELETE_COLLECTING_RESPONSE_SCHEMA = z.object({
   botReply: z.string(),
   aiStatus: z.literal(FlowAIStatus.COLLECTING),
 
-  appointmendId: z.string().nullable(),
+  appointmentId: z.string().nullable(),
   cancelledReason: z.string().nullable(),
 });
 

@@ -8,6 +8,7 @@ import type {
   AIResponse,
 } from '@domain/models/ai-provider.model';
 import {
+  FlowAIStatus,
   FlowMode,
   type BookingState,
 } from '@domain/models/booking-store.model';
@@ -175,6 +176,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
           const appointment = availability.appointment;
           statePatch = patchBookingState(statePatch, {
+            aiStatus: FlowAIStatus.RUNNING,
             preferredDate: normalizeDateInLimaISO(appointment?.appointmentDay!),
             preferredTime: `${appointment?.suggestedStart} - ${appointment?.suggestedEnd}`,
           });
@@ -229,6 +231,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
           const appointmentDetails = appointmentCreated.appointment;
           statePatch = patchBookingState(statePatch, {
+            aiStatus: FlowAIStatus.DONE,
             preferredDate: '',
             preferredTime: '',
             petName: '',
@@ -263,7 +266,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
           const appointmentCancelled = await schedulerService.cancelAppointment(
             args.appointmentId,
-            args?.cancelledReason || 'Sin motivo especificado'
+            args.cancelledReason || 'Sin motivo especificado'
           );
 
           if (!appointmentCancelled.success) {
@@ -274,6 +277,12 @@ export class OpenAIProviderOrchestrator implements AIProvider {
               },
             });
           }
+
+          statePatch = patchBookingState(statePatch, {
+            aiStatus: FlowAIStatus.DONE,
+            appointmentId: '',
+            cancelledReason: '',
+          });
 
           zodFormatResponse = zodTextFormat(
             AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
@@ -366,7 +375,6 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       }
 
       return {
-        // TODO: SI OCURRE UN ERROR DAR OPCION DE COMUNICAR CON HUMANO O VOLVER A INTENTARLO
         requestId: '',
         aiResponse: null,
         statePatch: {},
