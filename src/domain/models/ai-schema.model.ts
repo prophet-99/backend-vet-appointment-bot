@@ -57,8 +57,6 @@ export const AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA = z.object({
 export const AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA = z.object({
   botReply: z.string(),
   aiStatus: z.literal(FlowAIStatus.DONE),
-
-  reason: z.string().nullable(),
 });
 
 export type AICreateCollectingResponseSchema = z.infer<
