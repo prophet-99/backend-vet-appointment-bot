@@ -1,3 +1,4 @@
+import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 import { PetSize } from '@domain/enums/pet-size.enum';
 
 // ========== GET AVAILABILITY ==========
@@ -99,6 +100,14 @@ export interface CancelAppointmentOutput {
   errorReason?: string;
 }
 
+// ========== UPDATE APPOINTMENT STATUS ==========
+export interface UpdateAppointmentStatusOutput {
+  success: boolean;
+  statusCode: number;
+  errorCode?: string;
+  errorReason?: string;
+}
+
 export interface Scheduler {
   getAvailibility(params: GetAvailabilityInput): Promise<GetAvailabilityOutput>;
 
@@ -114,4 +123,9 @@ export interface Scheduler {
     appointmentId: string,
     reason?: string
   ): Promise<CancelAppointmentOutput>;
+
+  updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus
+  ): Promise<UpdateAppointmentStatusOutput>;
 }

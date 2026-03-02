@@ -82,6 +82,10 @@ Por favor, guarda este código de reserva para cualquier consulta o cambio.
 `.trim();
 }
 
+const REJECTED_APPOINTMENT_MESSAGE = `Lamentamos informarte que, por ahora, la doctora no podrá atender tu cita. 😔 En breve te escribirá para explicarte el motivo y ayudarte a reprogramarla.`;
+
+const ACCEPTED_APPOINTMENT_MESSAGE = `¡Buenas noticias! ✨ La doctora confirmó tu cita. 😊 ¡Te esperamos con mucho cariño en The Urban Pet! 🐾`;
+
 export {
   WELCOME_MESSAGE,
   VET_DETAILS_MESSAGE,
@@ -90,4 +94,6 @@ export {
   CREATE_BOOKING_MESSAGE,
   DELETE_BOOKING_MESSAGE,
   BOOKING_SUMMARY_MESSAGE,
+  REJECTED_APPOINTMENT_MESSAGE,
+  ACCEPTED_APPOINTMENT_MESSAGE,
 };

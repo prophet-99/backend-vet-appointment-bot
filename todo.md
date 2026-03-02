@@ -10,7 +10,6 @@
 - Si es un gato que se hará, es pequeño pero SERVICIOS???
 
 - Metodo para confirmar cita / rechazarla y que mande a n8n respuesta
-- Mejorar la redacción de mensajes de error.
 
 # REGLAS NEGOCIO
 

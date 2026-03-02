@@ -238,7 +238,7 @@ export class SchedulerRepository {
     });
   }
 
-  async updateAppointmentStatus(input: {
+  async cancelAppointment(input: {
     appointmentId: string;
     status: AppointmentStatus;
     reason: string;
@@ -248,6 +248,18 @@ export class SchedulerRepository {
     return prismaClient.appointment.update({
       where: { id: appointmentId },
       data: { status, cancelledReason: reason },
+    });
+  }
+
+  async updateAppointmentStatus(input: {
+    appointmentId: string;
+    status: AppointmentStatus;
+  }) {
+    const { appointmentId, status } = input;
+
+    return prismaClient.appointment.update({
+      where: { id: appointmentId },
+      data: { status },
     });
   }
 }

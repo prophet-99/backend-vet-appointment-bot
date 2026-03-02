@@ -3,10 +3,8 @@ import {
   FlowMode,
   FlowModeStatus,
 } from '@domain/models/booking-store.model';
-import {
-  MENU_SELECTION_REQUIRED_MESSAGE,
-  VET_DETAILS_MESSAGE,
-} from '@shared/symbols/conversation.contants';
+import { HUMAN_ESCALATION_MESSAGE } from '@shared/symbols/conversation.contants';
+import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import {
   type ChatTurnRequest,
   type ChatTurnResponse,
@@ -25,31 +23,25 @@ export class HumanStrategy extends ChatTurnStrategy {
     stateToPatch.lastUserText = user.message;
 
     if (bookingState.modeStatus === FlowModeStatus.INITIAL) {
-      stateToPatch.mode = FlowMode.INFO;
+      stateToPatch.mode = FlowMode.HUMAN;
       stateToPatch.modeStatus = FlowModeStatus.IN_PROGRESS;
-      stateToPatch.lastBotText = VET_DETAILS_MESSAGE;
+      stateToPatch.lastBotText = HUMAN_ESCALATION_MESSAGE;
     }
 
     if (bookingState.modeStatus === FlowModeStatus.IN_PROGRESS) {
-      stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
-      // TODO: DELETE THIS COMMENT:
-      /**
-       *! FLUJO DE ERROR - USUARIO NO SELECCIONA UNA OPCIÓN VÁLIDA DEL MENÚ
-       * 1) Se envía a n8n -> el mode: 'INFO' y statusMode: 'IN_PROGRESS'
-       * 2) n8n responde con el "reply" al WhatsApp al cliente
-       * */
+      return {
+        statusCode: ErrorCodes.HUMAN_ESCALATION_IGNORED.statusCode,
+        conversationId: stateToPatch.conversationId,
+        botReply: '',
+        mode: stateToPatch.mode,
+        modeStatus: stateToPatch.modeStatus,
+        ignored: true,
+        reason: ErrorCodes.HUMAN_ESCALATION_IGNORED.message,
+      };
     }
 
     await this.bookingStoreService.upsert(stateToPatch);
 
-    // TODO: DELETE THIS COMMENT
-    /**
-     * 1) n8n -> RECIBE el mode: 'INFO'
-     * 2) n8n -> RESPONDE con el "reply" al WhatsApp al cliente
-     * 3) n8n -> RESPONDE con un menu de dos botones: "Menú principal" ó "Hablar con la Dra."
-     * 4) n8n -> Si el cliente elige "Menú principal" -> RESPONDE con el mode: 'MENU_SHOW_OPTIONS' y vuelve al paso 1
-     * 5) n8n -> Si el cliente elige "Hablar con la Dra." -> RESPONDE con el mode: 'HUMAN' y vuelve al paso 1
-     * */
     return {
       statusCode: 200,
       conversationId: stateToPatch.conversationId,

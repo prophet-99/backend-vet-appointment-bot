@@ -7,12 +7,14 @@ import { env } from '@config/env';
 import { ConversationOrchestrator } from '@infraestructure/orchestators/conversation.orchestrator';
 import { adaptN8nWhatsappToConversationInput } from '@infraestructure/adapters/n8n-whatsapp.adapter';
 import { InteractionOptionAdapter } from '@infraestructure/adapters/interaction-option.adapter';
+import conversationRoutes from '@application/routes/conversation.routes';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use('/conversation', conversationRoutes);
 app.get('/test/message/:message/intention/:userIntention', async (req, res) => {
   const request = {
     waBusinessId: '1816212025750259',

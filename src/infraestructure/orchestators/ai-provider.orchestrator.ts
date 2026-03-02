@@ -8,15 +8,11 @@ import type {
   AIResponse,
 } from '@domain/models/ai-provider.model';
 import {
-  FlowAIStatus,
   FlowMode,
   type BookingState,
 } from '@domain/models/booking-store.model';
 import { openAIClient } from '@infraestructure/ai/open-ai.client';
 import {
-  AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA,
-  AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA,
-  AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
   type AIMergedResponseSchema,
   getAISchemaResponse,
 } from '@domain/models/ai-schema.model';
@@ -25,11 +21,6 @@ import {
   getUserPrompt,
 } from '@infraestructure/ai/open-ai.prompt';
 import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
-import {
-  normalizeDayInLima,
-  normalizeDayInLimaISO,
-  normalizeDateInLimaISO,
-} from '@shared/utils/date.util';
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { patchBookingState } from '@shared/utils/state.util';
 import { GetAvailabilityHandler } from './ai-provider-handlers/get-availability.handler';

@@ -1,8 +1,12 @@
-import { type ChatTurnResponse } from '@domain/models/chat.model';
+import type {
+  HandleChatTurnRequest,
+  HandleChatTurnResponse,
+  ManageAppointmentRequest,
+  ManageAppointmentResponse,
+} from '@domain/models/conversation.model';
 import { ConversationService } from '@domain/services/conversation.service';
 import { InDBBookingStoreService } from '@domain/services/booking-store.service';
 import { SchedulerService } from '@domain/services/scheduler.service';
-import { InteractionOption } from '@domain/enums/interaction-option.enum';
 import { BookingStoreRepository } from '@infraestructure/db/repositories/booking-store.repository';
 import { SchedulerRepository } from '@infraestructure/db/repositories/scheduler.repository';
 import { OpenAIProviderOrchestrator } from './ai-provider.orchestrator';
@@ -24,14 +28,16 @@ export class ConversationOrchestrator {
     );
   }
 
-  async handleChatTurn(params: {
-    conversationId: string;
-    userName: string;
-    userMessage: string;
-    userPhoneNumber: string;
-    userSelectionId?: InteractionOption;
-  }): Promise<ChatTurnResponse> {
-    const { conversationId, userName, userMessage, userPhoneNumber, userSelectionId } = params;
+  async handleChatTurn(
+    params: HandleChatTurnRequest
+  ): Promise<HandleChatTurnResponse> {
+    const {
+      conversationId,
+      userName,
+      userMessage,
+      userPhoneNumber,
+      userSelectionId,
+    } = params;
 
     return this.conversationService.handleChatTurn({
       conversationId,
@@ -39,6 +45,17 @@ export class ConversationOrchestrator {
       userMessage,
       userPhoneNumber,
       userSelectionId,
+    });
+  }
+
+  async rejectOrAcceptAppointment(
+    params: ManageAppointmentRequest
+  ): Promise<ManageAppointmentResponse> {
+    const { appointmentId, doctorChoice } = params;
+
+    return this.conversationService.rejectOrAcceptAppointment({
+      appointmentId,
+      doctorChoice,
     });
   }
 }

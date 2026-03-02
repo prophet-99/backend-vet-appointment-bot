@@ -10,6 +10,7 @@ import {
   type GetAppointmentOutput,
   type CancelAppointmentOutput,
   type GetServicesIdByNameOutput,
+  UpdateAppointmentStatusOutput,
 } from '@domain/models/scheduler.model';
 import {
   APPOINTMENT_CONFIG,
@@ -32,6 +33,7 @@ import {
 } from '@shared/utils/date.util';
 import { findFirstSlot, mergeIntervals } from '@shared/utils/interval.util';
 import { getServiceNames } from '@domain/enums/service-name.enum';
+import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 
 export class SchedulerService implements Scheduler {
   constructor(private schedulerRepository: SchedulerRepository) {}
@@ -437,10 +439,34 @@ export class SchedulerService implements Scheduler {
       }
 
       // Cambiar estado a CANCELLED
-      await this.schedulerRepository.updateAppointmentStatus({
+      await this.schedulerRepository.cancelAppointment({
         appointmentId,
         status: 'CANCELLED',
         reason,
+      });
+
+      return {
+        success: true,
+        statusCode: 200,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: ErrorCodes.CANCEL_APPOINTMENT_FAILED.statusCode,
+        errorCode: ErrorCodes.CANCEL_APPOINTMENT_FAILED.code,
+        errorReason: ErrorCodes.CANCEL_APPOINTMENT_FAILED.message,
+      };
+    }
+  }
+
+  async updateAppointmentStatus(
+    appointmentId: string,
+    status: AppointmentStatus
+  ): Promise<UpdateAppointmentStatusOutput> {
+    try {
+      await this.schedulerRepository.updateAppointmentStatus({
+        appointmentId,
+        status,
       });
 
       return {
