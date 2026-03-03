@@ -29,29 +29,33 @@ export interface WhatsAppInboundMessage {
 export const adaptN8nWhatsappToConversationInput = (
   body: unknown
 ): WhatsAppInboundMessage[] => {
-  const payload = PayloadSchema.parse(body);
+  try {
+    const payload = PayloadSchema.parse(body);
 
-  // Group by conversationId
-  const map = new Map<string, WhatsAppInboundMessage>();
-  for (const msg of payload.messages) {
-    const conversationId = `${payload.waBusinessPhoneNumberId}:${msg.userPhoneNumber}`;
-    const existing = map.get(conversationId);
+      // Group by conversationId
+      const map = new Map<string, WhatsAppInboundMessage>();
+      for (const msg of payload.messages) {
+        const conversationId = `${payload.waBusinessPhoneNumberId}:${msg.userPhoneNumber}`;
+        const existing = map.get(conversationId);
 
-    if (existing) {
-      existing.input = `${existing.input}\n${msg.waMessage.trim()}`.trim();
-      existing.messageIds.push(msg.waMessageId);
-    } else {
-      map.set(conversationId, {
-        conversationId,
-        waBusinessId: payload.waBusinessId,
-        waBusinessPhoneNumberId: payload.waBusinessPhoneNumberId,
-        userPhoneNumber: msg.userPhoneNumber,
-        username: msg.username,
-        input: msg.waMessage.trim(),
-        messageIds: [msg.waMessageId],
-      });
-    }
+        if (existing) {
+          existing.input = `${existing.input}\n${msg.waMessage.trim()}`.trim();
+          existing.messageIds.push(msg.waMessageId);
+        } else {
+          map.set(conversationId, {
+            conversationId,
+            waBusinessId: payload.waBusinessId,
+            waBusinessPhoneNumberId: payload.waBusinessPhoneNumberId,
+            userPhoneNumber: msg.userPhoneNumber,
+            username: msg.username,
+            input: msg.waMessage.trim(),
+            messageIds: [msg.waMessageId],
+          });
+        }
+      }
+
+      return [...map.values()];
+  } catch (err) {
+    throw new Error(`Error al validar el payload de WhatsApp: ${(err as Error).message}`);
   }
-
-  return [...map.values()];
 };

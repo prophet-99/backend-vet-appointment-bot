@@ -14,12 +14,11 @@ import {
   FlowModeStatus,
 } from '@domain/models/booking-store.model';
 import { InteractionOption } from '@domain/enums/interaction-option.enum';
+import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 import { calculateBookingExpiration } from '@shared/utils/state.util';
 import {
-  type ChatTurnResponse,
   ChatTurnStrategy,
 } from './chat-turn-strategies/chat-turn.strategy';
-import { AppointmentStatus } from '@prisma/client';
 import {
   ACCEPTED_APPOINTMENT_MESSAGE,
   REJECTED_APPOINTMENT_MESSAGE,

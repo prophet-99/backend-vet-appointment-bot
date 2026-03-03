@@ -10,6 +10,6 @@ const conversationController = new ConversationController(
 );
 
 router.post('/send', conversationController.sendMessageToWhatsApp);
-router.post('/manage-appointment', conversationController.manageAppointment);
+router.post('/appointment-status/update', conversationController.updateStatusAndNotifyWhatsApp);
 
 export default router;

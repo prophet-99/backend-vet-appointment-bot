@@ -9,8 +9,6 @@
 
 - Si es un gato que se hará, es pequeño pero SERVICIOS???
 
-- Metodo para confirmar cita / rechazarla y que mande a n8n respuesta
-
 # REGLAS NEGOCIO
 
 - Rercodar que existira días especiales no laborables que se pueden configurar
