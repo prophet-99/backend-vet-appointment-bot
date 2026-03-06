@@ -9,47 +9,58 @@ export class ConversationController {
 
   async sendMessageToWhatsApp(req: Request, res: Response) {
     try {
-      // TODO: IMPROVE, THE ADAPTER IS INCOMPLETED
       const waConversations = adaptN8nWhatsappToConversationInput(req.body);
 
-      const chatResponse = waConversations.map(async (conv) => {
-        return await this.conversationOrch.handleChatTurn({
-          conversationId: '',
-          userMessage: '',
-          userName: '',
-          userPhoneNumber: '',
-          userSelectionId: undefined,
-        });
-      });
+      const chatResponse = waConversations.map(
+        async ({
+          conversationId,
+          userName,
+          userPhoneNumber,
+          waMessage,
+          waUserSelection,
+        }) => {
+          return await this.conversationOrch.handleChatTurn({
+            conversationId,
+            userMessage: waMessage,
+            userName,
+            userPhoneNumber,
+            userSelectionId: waUserSelection,
+          });
+        }
+      );
       const responseToUser = await Promise.all(chatResponse);
 
       return res.json(responseToUser);
-    } catch(err) {
-      return res.status(521).json([{
-        statusCode: 521,
-        conversationId: '',
-        botReply: '',
-        mode: '',
-        modeStatus: '',
-        ignored: false,
-        reason: (err as Error).message,
-      }]);
+    } catch (err) {
+      return res.status(521).json([
+        {
+          statusCode: 521,
+          conversationId: '',
+          botReply: '',
+          mode: '',
+          modeStatus: '',
+          ignored: false,
+          reason: (err as Error).message,
+        },
+      ]);
     }
   }
 
   async updateStatusAndNotifyWhatsApp(req: Request, res: Response) {
     try {
-      const { appointmentId, doctorChoice } = adaptWebClientToUpdateStatusInput(req.body);
-  
-      const appointmentResponse = await this.conversationOrch.rejectOrAcceptAppointment({
-        appointmentId,
-        doctorChoice,
-      });
-  
+      const { appointmentId, doctorChoice } = adaptWebClientToUpdateStatusInput(
+        req.body
+      );
+
+      const appointmentResponse =
+        await this.conversationOrch.rejectOrAcceptAppointment({
+          appointmentId,
+          doctorChoice,
+        });
+
       return res.json(appointmentResponse);
-    }
-    catch(err) {
-      return res.status(521).json({ 
+    } catch (err) {
+      return res.status(521).json({
         statusCode: 521,
         botReply: '',
         reason: (err as Error).message,
