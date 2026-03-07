@@ -9,10 +9,15 @@ const conversationController = new ConversationController(
   conversationOrchestrator
 );
 
-router.post('/respond', conversationController.sendMessageToWhatsApp);
+router.post(
+  '/respond',
+  conversationController.sendMessageToWhatsApp.bind(conversationController)
+);
 router.post(
   '/appointment-status/update',
-  conversationController.updateStatusAndNotifyWhatsApp
+  conversationController.updateStatusAndNotifyWhatsApp.bind(
+    conversationController
+  )
 );
 
 export default router;

@@ -17,12 +17,10 @@ import { InteractionOption } from '@domain/enums/interaction-option.enum';
 import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 import { calculateBookingExpiration } from '@shared/utils/state.util';
 import {
-  ChatTurnStrategy,
-} from './chat-turn-strategies/chat-turn.strategy';
-import {
   ACCEPTED_APPOINTMENT_MESSAGE,
   REJECTED_APPOINTMENT_MESSAGE,
 } from '@shared/symbols/conversation.contants';
+import { createChatTurnStrategy } from './chat-turn-strategies/chat-turn.factory';
 
 export class ConversationService {
   constructor(
@@ -87,7 +85,7 @@ export class ConversationService {
       userSelectionId: params.userSelectionId,
     });
 
-    const chatStrategy = ChatTurnStrategy.handleFlowMode(userIntent, {
+    const chatStrategy = createChatTurnStrategy(userIntent, {
       bookingStoreService: this.bookingStoreService,
       aiProvider: this.aiProvider,
       schedulerService: this.schedulerService,
