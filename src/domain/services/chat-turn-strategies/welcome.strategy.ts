@@ -31,22 +31,10 @@ export class WelcomeStrategy extends ChatTurnStrategy {
         ? WELCOME_MESSAGE
         : '';
       stateToPatch.showGreeting = false;
-      // TODO: DELETE THIS COMMENT:
-      /**
-       * 1) Se envía a n8n -> el mode: 'WELCOME'
-       * 2) n8n responde con el "reply" al WhatsApp al cliente (concatenar + salto de línea)
-       * 3) n8n manda la Interactive List de WhatsApp al cliente
-       * */
     }
 
     if (bookingState.modeStatus === FlowModeStatus.IN_PROGRESS) {
       stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
-      // TODO: DELETE THIS COMMENT:
-      /**
-       *! FLUJO DE ERROR - USUARIO NO SELECCIONA UNA OPCIÓN VÁLIDA DEL MENÚ
-       * 1) Se envía a n8n -> el mode: 'WELCOME' y lastBotText: ''
-       * 2) n8n responde con el "reply" al WhatsApp al cliente (concatenar + salto de línea)
-       * */
     }
 
     await this.bookingStoreService.upsert(stateToPatch);

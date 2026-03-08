@@ -16,8 +16,6 @@ Lunes a Sabado de 9:00 a 18:30 hrs.
 📞 *Teléfono*  
 Este es el número por el que te estás comunicando.
 
----
-
 🛁 *Servicios disponibles*
 • Grooming  
 • Baños  

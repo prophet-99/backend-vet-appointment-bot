@@ -18,14 +18,21 @@ export class ConversationController {
           userPhoneNumber,
           waMessage,
           waUserSelection,
+          messageIds,
         }) => {
-          return await this.conversationOrch.handleChatTurn({
-            conversationId,
-            userMessage: waMessage,
-            userName,
-            userPhoneNumber,
-            userSelectionId: waUserSelection,
-          });
+          const orchestatorResponse =
+            await this.conversationOrch.handleChatTurn({
+              conversationId,
+              userMessage: waMessage,
+              userName,
+              userPhoneNumber,
+              userSelectionId: waUserSelection,
+            });
+
+          return {
+            ...orchestatorResponse,
+            messageIds,
+          };
         }
       );
       const responseToUser = await Promise.all(chatResponse);
@@ -36,6 +43,7 @@ export class ConversationController {
         {
           statusCode: 521,
           conversationId: '',
+          messageIds: [],
           botReply: '',
           mode: '',
           modeStatus: '',
