@@ -236,7 +236,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         return {
           requestId: '',
           aiResponse: null,
-          statePatch: {},
+          statePatch: error.cause?.nextState ?? {},
           statusCode: error.cause.statusCode,
           errorCode: error.message,
           errorReason: error.cause.errorReason,

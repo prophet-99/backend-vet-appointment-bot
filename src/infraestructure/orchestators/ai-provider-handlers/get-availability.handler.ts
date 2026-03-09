@@ -25,12 +25,21 @@ export class GetAvailabilityHandler extends TollCallHandler {
     let statePatch = { ...currentState };
 
     const missingParams: string[] = [];
-    if (!args.preferredDate) missingParams.push('preferredDate');
-    if (!args.petName) missingParams.push('petName');
-    if (!args.petSize) missingParams.push('petSize');
-    if (!args.petBreed) missingParams.push('petBreed');
-    if (!args.notes) missingParams.push('notes');
-    if (!args.servicesName) missingParams.push('servicesName');
+    if (!args.preferredDate) missingParams.push('Fecha de cita');
+    if (!args.petName) missingParams.push('Nombre de la mascota');
+    if (!args.petSize) missingParams.push('Tamaño de la mascota');
+    if (!args.petBreed) missingParams.push('Raza de la mascota');
+    if (!args.notes) missingParams.push('Notas adicionales');
+    if (!args.servicesName) missingParams.push('Servicios');
+
+    statePatch = patchBookingState(statePatch, {
+      preferredDate: args.preferredDate,
+      petName: args.petName,
+      petSize: args.petSize,
+      petBreed: args.petBreed,
+      notes: args.notes,
+      servicesName: args.servicesName,
+    });
 
     if (missingParams.length > 0) {
       const missingError = ErrorCodes.MISSING_REQUIRED_PARAMETERS;
@@ -39,6 +48,7 @@ export class GetAvailabilityHandler extends TollCallHandler {
         cause: {
           statusCode: missingError.statusCode,
           errorReason: `${missingError.message}: [${missingParams.join(', ')}]`,
+          nextState: statePatch,
         },
       });
     }
@@ -55,6 +65,7 @@ export class GetAvailabilityHandler extends TollCallHandler {
         cause: {
           statusCode: availability.statusCode,
           errorReason: availability.errorReason,
+          nextState: statePatch,
         },
       });
     }
@@ -64,11 +75,6 @@ export class GetAvailabilityHandler extends TollCallHandler {
       aiStatus: FlowAIStatus.RUNNING,
       preferredDate: normalizeDateInLimaISO(appointment?.appointmentDay!),
       preferredTime: `${appointment?.suggestedStart} - ${appointment?.suggestedEnd}`,
-      petName: args.petName,
-      petSize: args.petSize,
-      petBreed: args.petBreed,
-      notes: args.notes,
-      servicesName: args.servicesName,
     });
 
     return {

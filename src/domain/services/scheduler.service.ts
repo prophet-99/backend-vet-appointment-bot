@@ -151,7 +151,7 @@ export class SchedulerService implements Scheduler {
       const servicesName = servicesNotAvailable
         .map(({ serviceId }) => {
           const svc = services.find(({ id }) => id === serviceId);
-          return svc ? svc.name : 'unknown';
+          return svc ? svc.name.replaceAll('_', ' ') : 'unknown';
         })
         .join(', ');
 
@@ -159,7 +159,7 @@ export class SchedulerService implements Scheduler {
         success: false,
         statusCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.statusCode,
         errorCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.code,
-        errorReason: `${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message} [${servicesName}]`,
+        errorReason: `(${servicesName}) ${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message}`,
       };
     }
 

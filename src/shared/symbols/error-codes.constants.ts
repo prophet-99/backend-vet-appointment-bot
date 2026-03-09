@@ -17,99 +17,100 @@ export const ErrorCodes = {
     code: 'APPOINTMENT_SLOT_CONFLICT',
     statusCode: 409,
     message:
-      'El horario ya no está disponible. Consulta nuevamente escribiendo: "Disponibilidad para dd/mm a las hh:mm am/pm"',
+      '⏰ El horario ya no está disponible. Consulta nuevamente escribiendo: "Disponibilidad para dd/mm a las hh:mm am/pm"',
   },
   SERVICE_INTERPRETATION_FAILED: {
     code: 'SERVICE_INTERPRETATION_FAILED',
     statusCode: 422,
     message:
-      'No pude interpretar el servicio. Pero no te preocupes, confírmame el servicio que deseas y si el problema persiste la doctora se comunicará contigo para agendar tu cita.',
+      '🤔 No pude interpretar el servicio. Pero no te preocupes, confírmame el servicio que deseas y si el problema persiste la doctora se comunicará contigo para agendar tu cita.',
   },
   SERVICE_NOT_FOUND: {
     code: 'SERVICE_NOT_FOUND',
     statusCode: 404,
-    message: `No pude correlacionar el servicio con los que ofrezco. Por favor, elige entre: ${getServiceDisplayNames().join(', ')}.`,
+    message: `🔍 No pude correlacionar el servicio con los que ofrezco. Por favor, elige entre: ${getServiceDisplayNames().join(', ')}.`,
   },
   SERVICE_NOT_AVAILABLE_FOR_SIZE: {
     code: 'SERVICE_NOT_AVAILABLE_FOR_SIZE',
     statusCode: 422,
-    message: `Este servicio no aplica para ese tamaño. Por favor, elige algunas de estas opciones: ${getServiceDisplayNames().join(', ')}.`,
+    message: `Este servicio normalmente no está disponible para el tamaño de tu mascota 🙁. Sin embargo, la doctora podría hacer una excepción. Por favor, espera en línea para que ella evalúe tu caso, o elige otro servicio disponible.`,
   },
   DURATION_RULES_MISSING: {
     code: 'DURATION_RULES_MISSING',
     statusCode: 500,
     message:
-      'No hay horas disponibles para esta combinación. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
+      '⏰ No hay horas disponibles para esta combinación. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
   },
   NO_AVAILABILITY: {
     code: 'NO_AVAILABILITY',
     statusCode: 404,
     message:
-      'Sin cupos disponibles en los próximos días. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
+      '😔 Sin cupos disponibles en los próximos días. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
   },
   PARSED_DATE_INVALID: {
     code: 'PARSED_DATE_INVALID',
     statusCode: 422,
     message:
-      'Formato de fecha no válido. Usa: "dd/mm a las hh:mm am/pm" o "mañana a las 2 PM"',
+      '📅 Formato de fecha no válido. Usa: "dd/mm a las hh:mm am/pm" o "mañana a las 2 PM"',
   },
   GREATHER_THAN_NOW: {
     code: 'GREATHER_THAN_NOW',
     statusCode: 422,
     message:
-      '¡Recuerda! No puedes agendar una cita en el pasado. Por favor, proporciona una nueva fecha y hora en el formato: "dd/mm a las hh:mm am/pm"',
+      '⏰ ¡Recuerda! No puedes agendar una cita en el pasado. Por favor, proporciona una nueva fecha y hora en el formato: "dd/mm a las hh:mm am/pm"',
   },
   MISSING_REQUIRED_PARAMETERS: {
     code: 'MISSING_REQUIRED_PARAMETERS',
     statusCode: 422,
     message:
-      'Necesito algunos datos más para procesar tu solicitud. Por favor, coméntame los siguientes:',
+      '📝 Necesito algunos datos más para procesar tu solicitud. Por favor, coméntame los siguientes:',
   },
   APPOINTMENT_NOT_FOUND: {
     code: 'APPOINTMENT_NOT_FOUND',
     statusCode: 404,
     message:
-      'No encontré la cita solicitada, por favor verifica el ID de la cita y vuelve a intentarlo. Recuerda que es en formato: "apt_xxx"',
+      '🔍 No encontré la cita solicitada, por favor verifica el ID de la cita y vuelve a intentarlo. Recuerda que es en formato: "apt_xxx"',
   },
   CREATE_APPOINTMENT_FAILED: {
     code: 'CREATE_APPOINTMENT_FAILED',
     statusCode: 500,
     message:
-      'Disculpa, no pude agendar la cita, si quieres reintentarlo escribe: "Reintenta crear la cita" ó espera en línea para que la doctora te ayude a agendar tu cita.',
+      '😔 Disculpa, no pude agendar la cita, si quieres reintentarlo escribe: "Reintenta crear la cita" ó espera en línea para que la doctora te ayude a agendar tu cita.',
   },
   APPOINTMENT_ALREADY_CANCELLED: {
     code: 'APPOINTMENT_ALREADY_CANCELLED',
     statusCode: 400,
-    message: 'Esta cita ya se encuentra cancelada, gracias por avisarnos.',
+    message: '✅ Esta cita ya se encuentra cancelada, gracias por avisarnos.',
   },
   GET_APPOINTMENT_FAILED: {
     code: 'GET_APPOINTMENT_FAILED',
     statusCode: 500,
     message:
-      'No se pudo obtener la información de la cita, por favor intenta nuevamente, o si el problema persiste contacta a la doctora.',
+      '⚠️ No se pudo obtener la información de la cita, por favor intenta nuevamente, o si el problema persiste contacta a la doctora.',
   },
   CANCEL_APPOINTMENT_FAILED: {
     code: 'CANCEL_APPOINTMENT_FAILED',
     statusCode: 500,
     message:
-      'Disculpa, no pude cancelar la cita, si quieres reintentarlo escribe: "Reintenta cancelar la cita", ó espera en línea para que la doctora te ayude a cancelar y reagendar tu cita.',
+      '😔 Disculpa, no pude cancelar la cita, si quieres reintentarlo escribe: "Reintenta cancelar la cita", ó espera en línea para que la doctora te ayude a cancelar y reagendar tu cita.',
   },
   AI_GENERATE_RESPONSE_FAILED: {
     code: 'AI_GENERATE_RESPONSE_FAILED',
     statusCode: 500,
     message:
-      'Lo siento, he tenido un error al procesar tu mensaje, si quieres reintentarlo escribe: "Reintentar", ó espera en línea para que la doctora te ayude con tu petición.',
+      '😔 Lo siento, he tenido un error al procesar tu mensaje, si quieres reintentarlo escribe: "Reintentar", ó espera en línea para que la doctora te ayude con tu petición.',
   },
   AI_RESPONSE_PARSING_FAILED: {
     code: 'AI_RESPONSE_PARSING_FAILED',
     statusCode: 500,
     message:
-      'Disculpa, tuve un error al generar mi respuesta. ¿Podrías repetir tu solicitud? Si persiste, espera en línea para hablar con la doctora.',
+      '😔 Disculpa, tuve un error al generar mi respuesta. ¿Podrías repetir tu solicitud? Si persiste, espera en línea para hablar con la doctora.',
   },
   UPDATE_APPOINTMENT_STATUS_FAILED: {
     code: 'UPDATE_APPOINTMENT_STATUS_FAILED',
     statusCode: 500,
-    message: 'Error al actualizar el estado de la cita. Inténtalo nuevamente.',
+    message:
+      '⚠️ Error al actualizar el estado de la cita. Inténtalo nuevamente.',
   },
 } as const;
 
