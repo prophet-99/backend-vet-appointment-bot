@@ -10,7 +10,7 @@ export class ConversationController {
   async sendMessageToWhatsApp(req: Request, res: Response) {
     try {
       const waConversations = adaptN8nWhatsappToConversationInput(req.body);
-
+      throw new Error('Error de prueba para verificar manejo de errores');
       const chatResponse = waConversations.map(
         async ({
           conversationId,

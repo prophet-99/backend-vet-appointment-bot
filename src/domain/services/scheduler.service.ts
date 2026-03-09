@@ -28,6 +28,7 @@ import {
 import {
   addDays,
   dayOfWeekMonToSat,
+  normalizeDateInLimaISO,
   nowInLima,
   startOfDay,
 } from '@shared/utils/date.util';
@@ -88,13 +89,14 @@ export class SchedulerService implements Scheduler {
         errorReason: ErrorCodes.PARSED_DATE_INVALID.message,
       };
     }
+
     const { date: appointmentDay, preferredStartMinutes } = parseResult;
+    const now = nowInLima();
+    const appointmentDayISO = normalizeDateInLimaISO(appointmentDay!);
+    const nowDayISO = normalizeDateInLimaISO(now);
 
     //? 1) Validate grether than currentDate and time
-    if (
-      appointmentDay!.toISOString().split('T')[0] <
-      nowInLima().toISOString().split('T')[0]
-    ) {
+    if (appointmentDayISO < nowDayISO) {
       return {
         success: false,
         statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
@@ -103,16 +105,19 @@ export class SchedulerService implements Scheduler {
       };
     }
 
-    const currentHour = nowInLima().getHours() + ':' + nowInLima().getMinutes();
-    const hourInMinutesToday =
-      nowInLima() === appointmentDay ? hhmmToMinutes(currentHour) : 2_000; // 1439 is 23:59
-    if (preferredStartMinutes && hourInMinutesToday <= preferredStartMinutes) {
-      return {
-        success: false,
-        statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
-        errorCode: ErrorCodes.GREATHER_THAN_NOW.code,
-        errorReason: ErrorCodes.GREATHER_THAN_NOW.message,
-      };
+    if (
+      preferredStartMinutes !== undefined &&
+      appointmentDayISO === nowDayISO
+    ) {
+      const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
+      if (preferredStartMinutes < currentMinutesToday) {
+        return {
+          success: false,
+          statusCode: ErrorCodes.GREATHER_THAN_NOW.statusCode,
+          errorCode: ErrorCodes.GREATHER_THAN_NOW.code,
+          errorReason: ErrorCodes.GREATHER_THAN_NOW.message,
+        };
+      }
     }
 
     //? 2) Get service IDs from names
@@ -168,7 +173,6 @@ export class SchedulerService implements Scheduler {
 
     //? 4) Look for an opening on the current or following day (skipping Sundays/closures/business rules)
     let suggestedDay = appointmentDay!;
-    const now = nowInLima();
     let isFirstIteration = true;
 
     for (let i = 0; i <= lookAheadDays; i++) {
@@ -218,10 +222,20 @@ export class SchedulerService implements Scheduler {
       // - Primer día CON hora preferida: busca desde preferredTime en adelante
       // - Primer día SIN hora preferida: busca desde inicio del turno
       // - Días siguientes: siempre desde inicio del turno
-      const effectiveStartTime =
+      const baseEffectiveStartTime =
         isFirstIteration && preferredStartMinutes !== undefined
           ? Math.max(workShiftStart, preferredStartMinutes) // Math.max asegura que no busquemos antes del horario laboral
           : workShiftStart;
+
+      const isSuggestedDayToday =
+        normalizeDateInLimaISO(suggestedDay) === normalizeDateInLimaISO(now);
+      const currentMinutesToday = now.getHours() * 60 + now.getMinutes();
+      const effectiveStartTime = isSuggestedDayToday
+        ? Math.max(
+            baseEffectiveStartTime,
+            ceilToBlock(currentMinutesToday, blockMinutes)
+          )
+        : baseEffectiveStartTime;
 
       const slot = findFirstSlot({
         workShiftStart: effectiveStartTime,
@@ -231,15 +245,7 @@ export class SchedulerService implements Scheduler {
         requiredMinutes,
       });
 
-      const currentHour =
-        nowInLima().getHours() + ':' + nowInLima().getMinutes();
-      const hourInMinutesToday =
-        nowInLima() === suggestedDay ? hhmmToMinutes(currentHour) : 0;
-      if (
-        slot &&
-        suggestedDay >= nowInLima() &&
-        slot.start > hourInMinutesToday
-      ) {
+      if (slot) {
         return {
           success: true,
           statusCode: 200,

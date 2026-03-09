@@ -32,6 +32,13 @@ type OpenAIParsedResponseType = OpenAIParsedResponse<AIMergedResponseSchema> & {
 };
 
 export class OpenAIProviderOrchestrator implements AIProvider {
+  private sanitizeBotReply(text: string): string {
+    return text
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private buildUserStateSummary(bookingState: BookingState): string {
     const createStatus = `
       aiStatus=${bookingState.aiStatus}
@@ -183,7 +190,11 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       validReply(aiResponse?.botReply) &&
       validReply(aiResponse?.aiStatus)
     ) {
-      return aiResponse;
+      const cleanedReply = this.sanitizeBotReply(aiResponse.botReply);
+      return {
+        ...aiResponse,
+        botReply: cleanedReply,
+      };
     }
 
     throw new Error(ErrorCodes.AI_RESPONSE_PARSING_FAILED.code, {
