@@ -20,7 +20,7 @@ import {
   getSystemPrompt,
   getUserPrompt,
 } from '@infraestructure/ai/open-ai.prompt';
-import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
+import { getSystemTools } from '@infraestructure/ai/open-ai.tools';
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { patchBookingState } from '@shared/utils/state.util';
 import { GetAvailabilityHandler } from './ai-provider-handlers/get-availability.handler';
@@ -65,8 +65,9 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     systemPrompt: string;
     userPrompt: string;
     zodFormatResponse: any;
+    systemTools: any[];
   }): Promise<OpenAIParsedResponseType> {
-    const { systemPrompt, userPrompt, zodFormatResponse } = params;
+    const { systemPrompt, systemTools, userPrompt, zodFormatResponse } = params;
 
     return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
@@ -77,7 +78,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      tools: OPEN_AI_TOOLS as any,
+      tools: systemTools as any,
       text: { format: zodFormatResponse },
     });
   }
@@ -86,8 +87,10 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     previousResponseId: string;
     toolOutputs: any[];
     zodFormatResponse: any;
+    systemTools: any[];
   }): Promise<OpenAIParsedResponseType> {
-    const { previousResponseId, toolOutputs, zodFormatResponse } = params;
+    const { previousResponseId, toolOutputs, zodFormatResponse, systemTools } =
+      params;
 
     return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
@@ -96,6 +99,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       max_output_tokens: env.OPENAI_MAX_TOKENS,
       previous_response_id: previousResponseId,
       input: [...toolOutputs],
+      tools: systemTools as any,
       text: { format: zodFormatResponse },
     });
   }
@@ -159,6 +163,10 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         previousResponseId: toolsResponse.id,
         toolOutputs,
         zodFormatResponse,
+        systemTools: getSystemTools({
+          userIntent: bookingState.mode,
+          aiStatus: bookingState.aiStatus,
+        }),
       });
     }
 
@@ -200,12 +208,14 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
       const schemaResponse = getAISchemaResponse(systemConstruct);
       const systemPrompt = getSystemPrompt(systemConstruct);
+      const systemTools = getSystemTools(systemConstruct);
       const userPrompt = getUserPrompt(userConstruct);
 
       const initialAIResponse = await this.createAIResponse({
         systemPrompt,
         userPrompt,
         zodFormatResponse: zodTextFormat(schemaResponse, 'booking_state'),
+        systemTools,
       });
 
       const { toolsResponse, statePatch } = await this.runAndExecuteAITools({

@@ -20,17 +20,16 @@ export class ConversationController {
           waUserSelection,
           messageIds,
         }) => {
-          const orchestatorResponse =
-            await this.conversationOrch.handleChatTurn({
-              conversationId,
-              userMessage: waMessage,
-              userName,
-              userPhoneNumber,
-              userSelectionId: waUserSelection,
-            });
+          const orchResponse = await this.conversationOrch.handleChatTurn({
+            conversationId,
+            userMessage: waMessage,
+            userName,
+            userPhoneNumber,
+            userSelectionId: waUserSelection,
+          });
 
           return {
-            ...orchestatorResponse,
+            ...orchResponse,
             messageIds,
           };
         }

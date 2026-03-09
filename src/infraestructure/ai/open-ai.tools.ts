@@ -1,3 +1,5 @@
+import { FlowMode, FlowAIStatus } from '@domain/models/booking-store.model';
+
 export enum ToolName {
   GET_AVAILABILITY = 'getAvailability',
   CREATE_APPOINTMENT = 'createAppointment',
@@ -81,3 +83,29 @@ export const OPEN_AI_TOOLS = [
     },
   },
 ] as const;
+
+export const getSystemTools = (params: {
+  userIntent: FlowMode;
+  aiStatus: FlowAIStatus;
+}) => {
+  const { userIntent, aiStatus } = params;
+
+  const toolsMap: Record<string, ToolName[]> = {
+    [`${FlowMode.CREATE}-${FlowAIStatus.COLLECTING}`]: [
+      ToolName.GET_AVAILABILITY,
+    ],
+    [`${FlowMode.CREATE}-${FlowAIStatus.RUNNING}`]: [
+      ToolName.GET_AVAILABILITY,
+      ToolName.CREATE_APPOINTMENT,
+    ],
+    [`${FlowMode.DELETE}-${FlowAIStatus.COLLECTING}`]: [
+      ToolName.CANCEL_APPOINTMENT,
+    ],
+  };
+
+  const allowedToolNames = toolsMap[`${userIntent}-${aiStatus}`] || [];
+
+  return OPEN_AI_TOOLS.filter((tool) =>
+    allowedToolNames.includes(tool.name as ToolName)
+  );
+};
