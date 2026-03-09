@@ -67,14 +67,14 @@ function BOOKING_SUMMARY_MESSAGE(
   return `
 ✅ ¡Tu cita está confirmada!
 
-🆔 *Código de reserva*: ${data.appointmentId}
+🆔 *Código:* ${data.appointmentId}
 📅 *Fecha*: ${data.appointmentDate}
 ⏰ *Hora*: ${data.appointmentStartTime}
 🐾 *Mascota*: ${data.petName} (${data.petBreed}, ${data.petSize})
 🛁 *Servicios*: ${data.servicesName.join(', ')}
 📝 *Notas*: ${data.notes}
 📋 *Estado*: ${data.status}
-👤 *Dueño*: ${data.ownerName} (${data.ownerPhone})
+👤 *Dueño*: ${data.ownerName}
 
 Por favor, guarda este código de reserva para cualquier consulta o cambio.
 ¡Gracias por confiar en The Urban Pet! 💛🐶

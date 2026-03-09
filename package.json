@@ -9,6 +9,7 @@
     "start": "node dist/main.js",
     "prisma:reset": "prisma migrate reset",
     "prisma:migrate": "prisma migrate dev --name scheduler_v1.6.0",
+    "prisma:migrate:prod": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:seed": "prisma db seed"
   },

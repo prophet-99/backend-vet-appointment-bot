@@ -159,7 +159,7 @@ export class SchedulerService implements Scheduler {
         success: false,
         statusCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.statusCode,
         errorCode: ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.code,
-        errorReason: `(${servicesName}) ${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message}`,
+        errorReason: `"${servicesName}": ${ErrorCodes.SERVICE_NOT_AVAILABLE_FOR_SIZE.message}`,
       };
     }
 
