@@ -7,10 +7,20 @@ import { adaptWebClientToUpdateStatusInput } from '@infraestructure/adapters/web
 export class ConversationController {
   constructor(private conversationOrch: ConversationOrchestrator) {}
 
+  private isErrorWithStatusCode(
+    err: unknown
+  ): err is Error & { cause: { statusCode: number } } {
+    return (
+      err instanceof Error &&
+      typeof err.cause === 'object' &&
+      err.cause !== null &&
+      'statusCode' in err.cause
+    );
+  }
+
   async sendMessageToWhatsApp(req: Request, res: Response) {
     try {
       const waConversations = adaptN8nWhatsappToConversationInput(req.body);
-      throw new Error('Error de prueba para verificar manejo de errores');
       const chatResponse = waConversations.map(
         async ({
           conversationId,
@@ -28,6 +38,14 @@ export class ConversationController {
             userSelectionId: waUserSelection,
           });
 
+          if (orchResponse.statusCode >= 500) {
+            throw new Error(orchResponse.reason, {
+              cause: {
+                statusCode: orchResponse.statusCode,
+              },
+            });
+          }
+
           return {
             ...orchResponse,
             messageIds,
@@ -38,18 +56,11 @@ export class ConversationController {
 
       return res.json(responseToUser);
     } catch (err) {
-      return res.status(521).json([
-        {
-          statusCode: 521,
-          conversationId: '',
-          messageIds: [],
-          botReply: '',
-          mode: '',
-          modeStatus: '',
-          ignored: false,
-          reason: (err as Error).message,
-        },
-      ]);
+      const hasStatusCode = this.isErrorWithStatusCode(err);
+
+      return res.status(hasStatusCode ? err.cause.statusCode : 500).json({
+        reason: hasStatusCode ? err.message : 'Error interno del servidor',
+      });
     }
   }
 
