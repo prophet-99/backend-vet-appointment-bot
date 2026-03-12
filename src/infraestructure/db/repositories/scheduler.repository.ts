@@ -223,6 +223,21 @@ export class SchedulerRepository {
     });
   }
 
+  async getAppointmentsByDate(day: Date) {
+    return prismaClient.appointment.findMany({
+      where: { date: day },
+      include: {
+        items: {
+          include: {
+            service: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async findAppointmentById(appointmentId: string) {
     return prismaClient.appointment.findUnique({
       where: { id: appointmentId },

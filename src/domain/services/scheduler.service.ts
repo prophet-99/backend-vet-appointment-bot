@@ -10,7 +10,8 @@ import {
   type GetAppointmentOutput,
   type CancelAppointmentOutput,
   type GetServicesIdByNameOutput,
-  UpdateAppointmentStatusOutput,
+  type UpdateAppointmentStatusOutput,
+  type GetAppointmentsByDateOutput,
 } from '@domain/models/scheduler.model';
 import {
   APPOINTMENT_CONFIG,
@@ -372,6 +373,57 @@ export class SchedulerService implements Scheduler {
     };
   }
 
+  async getAppointmentsByDate(
+    date: Date
+  ): Promise<GetAppointmentsByDateOutput> {
+    try {
+      const appointments =
+        await this.schedulerRepository.getAppointmentsByDate(date);
+
+      if (appointments.length === 0) {
+        return {
+          success: false,
+          statusCode: ErrorCodes.APPOINTMENTS_BY_DATE_NOT_FOUND.statusCode,
+          errorCode: ErrorCodes.APPOINTMENTS_BY_DATE_NOT_FOUND.code,
+          errorReason: ErrorCodes.APPOINTMENTS_BY_DATE_NOT_FOUND.message,
+        };
+      }
+
+      const appointmentDate = (apt: any) =>
+        DateTime.fromJSDate(apt.date, {
+          zone: APP_TIMEZONE,
+        }).toFormat('yyyy-MM-dd');
+      const servicesName = (apt: any) =>
+        apt.items.map((item: any) => item.service.name);
+      // TODO: mapear a DTO y no exponer directamente el modelo de DB
+      return {
+        success: true,
+        statusCode: 200,
+        appointments: appointments.map((appointment) => ({
+          appointmentId: appointment.id,
+          appointmentDate,
+          appointmentStartTime: appointment.startTime,
+          appointmentEndTime: appointment.endTime,
+          ownerName: appointment.ownerName,
+          ownerPhone: appointment.ownerPhone,
+          petName: appointment.petName,
+          petSize: appointment.petSize,
+          petBreed: appointment.petBreed,
+          servicesName: appointment.items.map((item) => item.service.name),
+          notes: appointment.notes,
+          status: appointment.status,
+        })),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        statusCode: ErrorCodes.GET_APPOINTMENTS_FAILED.statusCode,
+        errorCode: ErrorCodes.GET_APPOINTMENTS_FAILED.code,
+        errorReason: ErrorCodes.GET_APPOINTMENTS_FAILED.message,
+      };
+    }
+  }
+
   async getAppointment(appointmentId: string): Promise<GetAppointmentOutput> {
     try {
       const appointment =
@@ -386,16 +438,14 @@ export class SchedulerService implements Scheduler {
         };
       }
 
-      const appointmentDate = DateTime.fromJSDate(appointment.date, {
-        zone: APP_TIMEZONE,
-      }).toFormat('yyyy-MM-dd');
-
       return {
         success: true,
         statusCode: 200,
         appointment: {
           appointmentId: appointment.id,
-          appointmentDate,
+          appointmentDate: DateTime.fromJSDate(appointment.date, {
+            zone: APP_TIMEZONE,
+          }).toFormat('yyyy-MM-dd'),
           appointmentStartTime: appointment.startTime,
           appointmentEndTime: appointment.endTime,
           ownerName: appointment.ownerName,

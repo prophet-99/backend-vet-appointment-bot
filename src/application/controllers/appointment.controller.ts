@@ -1,4 +1,11 @@
 export class AppointmentController {
-    // LISTADO DE APPOINTMENTS
+	constructor(private appointmentService: AppointmentService) {}
+
+	// LISTADO DE APPOINTMENTS
+	async getAppointments(req: Request, res: Response) {
+		try {
+			const appointments = await this.appointmentService.getAppointments();
+		}
+	}
 
 }

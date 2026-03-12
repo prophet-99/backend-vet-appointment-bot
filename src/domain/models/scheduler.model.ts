@@ -92,6 +92,28 @@ export interface GetAppointmentOutput {
   };
 }
 
+// ========== GET APPOINTMENTS BY DATE ==========
+export interface GetAppointmentsByDateOutput {
+  success: boolean;
+  statusCode: number;
+  errorCode?: string;
+  errorReason?: string;
+  appointments?: Array<{
+    appointmentId: string;
+    appointmentDate: string; // YYYY-MM-DD
+    appointmentStartTime: string; // HH:MM
+    appointmentEndTime: string; // HH:MM
+    ownerName: string;
+    ownerPhone: string;
+    petName: string;
+    petSize: string;
+    petBreed: string;
+    servicesName: string[];
+    notes: string;
+    status: string;
+  }>;
+}
+
 // ========== CANCEL APPOINTMENT ==========
 export interface CancelAppointmentOutput {
   success: boolean;

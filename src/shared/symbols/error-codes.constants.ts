@@ -1,6 +1,7 @@
 import { getServiceDisplayNames } from '@domain/enums/service-name.enum';
 
 export const ErrorCodes = {
+  // 200 SERIES (Ok response)
   USER_INTENT_NOT_IDENTIFIED: {
     code: 'USER_INTENT_NOT_IDENTIFIED',
     statusCode: 200,
@@ -13,33 +14,23 @@ export const ErrorCodes = {
     message:
       'Se ignora el mensaje porque el cliente ha solicitado hablar con un humano.',
   },
+
+  // 400 SERIES (Client error)
+  APPOINTMENT_ALREADY_CANCELLED: {
+    code: 'APPOINTMENT_ALREADY_CANCELLED',
+    statusCode: 400,
+    message: '✅ Esta cita ya se encuentra cancelada, gracias por avisarnos.',
+  },
   APPOINTMENT_SLOT_CONFLICT: {
     code: 'APPOINTMENT_SLOT_CONFLICT',
     statusCode: 409,
     message:
       '⏰ El horario ya no está disponible. Consulta nuevamente escribiendo: "Disponibilidad para dd/mm a las hh:mm am/pm"',
   },
-  SERVICE_INTERPRETATION_FAILED: {
-    code: 'SERVICE_INTERPRETATION_FAILED',
-    statusCode: 422,
-    message:
-      '🤔 No pude interpretar el servicio. Pero no te preocupes, confírmame el servicio que deseas y si el problema persiste la doctora se comunicará contigo para agendar tu cita.',
-  },
   SERVICE_NOT_FOUND: {
     code: 'SERVICE_NOT_FOUND',
     statusCode: 404,
     message: `🔍 No pude correlacionar el servicio con los que ofrezco. Por favor, elige entre: ${getServiceDisplayNames().join(', ')}.`,
-  },
-  SERVICE_NOT_AVAILABLE_FOR_SIZE: {
-    code: 'SERVICE_NOT_AVAILABLE_FOR_SIZE',
-    statusCode: 422,
-    message: `Este servicio normalmente no está disponible para el tamaño de tu mascota 🙁. Sin embargo, la doctora podría hacer una excepción. Por favor, espera en línea para que ella evalúe tu caso, o elige otro servicio disponible.`,
-  },
-  DURATION_RULES_MISSING: {
-    code: 'DURATION_RULES_MISSING',
-    statusCode: 500,
-    message:
-      '⏰ No hay horas disponibles para esta combinación. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
   },
   NO_AVAILABILITY: {
     code: 'NO_AVAILABILITY',
@@ -71,22 +62,49 @@ export const ErrorCodes = {
     message:
       '🔍 No encontré la cita solicitada, por favor verifica el ID de la cita y vuelve a intentarlo. Recuerda que es en formato: "apt_xxx"',
   },
+  APPOINTMENTS_BY_DATE_NOT_FOUND: {
+    code: 'APPOINTMENTS_BY_DATE_NOT_FOUND',
+    statusCode: 404,
+    message:
+      '🔍 No encontré citas para la fecha solicitada, por favor verifica vuelve a intentarlo.',
+  },
+
+  SERVICE_INTERPRETATION_FAILED: {
+    code: 'SERVICE_INTERPRETATION_FAILED',
+    statusCode: 422,
+    message:
+      '🤔 No pude interpretar el servicio. Pero no te preocupes, confírmame el servicio que deseas y si el problema persiste la doctora se comunicará contigo para agendar tu cita.',
+  },
+  SERVICE_NOT_AVAILABLE_FOR_SIZE: {
+    code: 'SERVICE_NOT_AVAILABLE_FOR_SIZE',
+    statusCode: 422,
+    message: `Este servicio normalmente no está disponible para el tamaño de tu mascota 🙁. Sin embargo, la doctora podría hacer una excepción. Por favor, espera en línea para que ella evalúe tu caso, o elige otro servicio disponible.`,
+  },
+
+  // 500 SERIES (Server error)
+  DURATION_RULES_MISSING: {
+    code: 'DURATION_RULES_MISSING',
+    statusCode: 500,
+    message:
+      '⏰ No hay horas disponibles para esta combinación. Por favor, espera en línea para que la doctora te ayude a agendar tu cita.',
+  },
   CREATE_APPOINTMENT_FAILED: {
     code: 'CREATE_APPOINTMENT_FAILED',
     statusCode: 500,
     message:
       '😔 Disculpa, no pude agendar la cita, si quieres reintentarlo escribe: "Reintenta crear la cita" ó espera en línea para que la doctora te ayude a agendar tu cita.',
   },
-  APPOINTMENT_ALREADY_CANCELLED: {
-    code: 'APPOINTMENT_ALREADY_CANCELLED',
-    statusCode: 400,
-    message: '✅ Esta cita ya se encuentra cancelada, gracias por avisarnos.',
-  },
   GET_APPOINTMENT_FAILED: {
     code: 'GET_APPOINTMENT_FAILED',
     statusCode: 500,
     message:
       '⚠️ No se pudo obtener la información de la cita, por favor intenta nuevamente, o si el problema persiste contacta a la doctora.',
+  },
+  GET_APPOINTMENTS_FAILED: {
+    code: 'GET_APPOINTMENTS_FAILED',
+    statusCode: 500,
+    message:
+      '⚠️ No se pudo obtener la información de las citas, por favor intenta nuevamente.',
   },
   CANCEL_APPOINTMENT_FAILED: {
     code: 'CANCEL_APPOINTMENT_FAILED',
