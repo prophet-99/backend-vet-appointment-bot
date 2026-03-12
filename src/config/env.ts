@@ -5,6 +5,8 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().default(3000),
   HOST: z.string().default('127.0.0.1'),
 
+  N8N_SINGLE_USE_TOKEN: z.string().min(16),
+
   DATABASE_URL: z.string().min(10).includes('postgres://'),
 
   OPENAI_API_KEY: z.string().min(10),

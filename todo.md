@@ -9,14 +9,13 @@
 
 - Si es un gato que se hará, es pequeño pero SERVICIOS???
 
-- Metodo para confirmar cita / rechazarla y que mande a n8n respuesta
-- Mejorar la redacción de mensajes de error.
-
 # REGLAS NEGOCIO
 
 - Rercodar que existira días especiales no laborables que se pueden configurar
 
-# TESTS
+# DB
 
-http://127.0.0.1:3000/test/hola habra cita para hoy para jota?
-http://127.0.0.1:3000/test/Es grande quiero un baño simple con corte de uñas y limpieza de glandulas anales
+psql -U postgres -d db_dog_glam_vet
+\dt
+\pset pager off
+delete from booking_state where conversation_id='899129189958396:51932265652';

@@ -7,6 +7,12 @@ import {
 import type { AIProvider } from '@domain/models/ai-provider.model';
 import type { Scheduler } from '@domain/models/scheduler.model';
 import {
+  AppointmentStatus,
+  getAppointmentStatusDisplayName,
+} from '@domain/enums/appointment-status.enum';
+import { PetSize, getPetSizeDisplayName } from '@domain/enums/pet-size.enum';
+
+import {
   BOOKING_SUMMARY_MESSAGE,
   CREATE_BOOKING_MESSAGE,
   MENU_SELECTION_REQUIRED_MESSAGE,
@@ -74,23 +80,19 @@ export class CreateStrategy extends ChatTurnStrategy {
           ownerName: aiResponse.ownerName!,
           ownerPhone: aiResponse.ownerPhone!,
           petName: aiResponse.petName!,
-          petSize: aiResponse.petSize!,
+          petSize: getPetSizeDisplayName(aiResponse.petSize! as PetSize),
           petBreed: aiResponse.petBreed!,
           servicesName: aiResponse.servicesName!,
           notes: aiResponse.notes!,
-          status: aiResponse.status!,
+          status: getAppointmentStatusDisplayName(
+            aiResponse.status! as AppointmentStatus
+          ),
         }}`;
       }
     }
 
     if (bookingState.modeStatus === FlowModeStatus.COMPLETED) {
       stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
-      // TODO: DELETE THIS COMMENT:
-      /**
-       *! FLUJO DE ERROR - USUARIO NO SELECCIONA UNA OPCIÓN VÁLIDA DEL MENÚ
-       * 1) Se envía a n8n -> el mode: 'CREATE' y statusMode: 'COMPLETED'
-       * 2) n8n responde con el "reply" al WhatsApp al cliente
-       * */
     }
 
     await this.bookingStoreService.upsert(stateToPatch);

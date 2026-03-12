@@ -53,7 +53,7 @@ const main = async (consoleMessage: () => void) => {
 
     { service: 'bano_corte', petSize: 'SMALL', minutes: 90 },
     { service: 'bano_corte', petSize: 'MEDIUM', minutes: 120 },
-    { service: 'bano_corte', petSize: 'LARGE', minutes: 0 },
+    { service: 'bano_corte', petSize: 'LARGE', minutes: 120 },
 
     { service: 'vacuna', petSize: 'SMALL', minutes: 15 },
     { service: 'vacuna', petSize: 'MEDIUM', minutes: 15 },

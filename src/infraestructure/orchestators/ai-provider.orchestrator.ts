@@ -8,15 +8,11 @@ import type {
   AIResponse,
 } from '@domain/models/ai-provider.model';
 import {
-  FlowAIStatus,
   FlowMode,
   type BookingState,
 } from '@domain/models/booking-store.model';
 import { openAIClient } from '@infraestructure/ai/open-ai.client';
 import {
-  AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA,
-  AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA,
-  AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
   type AIMergedResponseSchema,
   getAISchemaResponse,
 } from '@domain/models/ai-schema.model';
@@ -24,20 +20,25 @@ import {
   getSystemPrompt,
   getUserPrompt,
 } from '@infraestructure/ai/open-ai.prompt';
-import { OPEN_AI_TOOLS } from '@infraestructure/ai/open-ai.tools';
-import {
-  normalizeDayInLima,
-  normalizeDayInLimaISO,
-  normalizeDateInLimaISO,
-} from '@shared/utils/date.util';
+import { getSystemTools } from '@infraestructure/ai/open-ai.tools';
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { patchBookingState } from '@shared/utils/state.util';
+import { GetAvailabilityHandler } from './ai-provider-handlers/get-availability.handler';
+import { CreateAppointmentHandler } from './ai-provider-handlers/create-appointment.handler';
+import { CancelAppointmentHandler } from './ai-provider-handlers/cancel-appointment.handler';
 
 type OpenAIParsedResponseType = OpenAIParsedResponse<AIMergedResponseSchema> & {
   _request_id?: string | null;
 };
 
 export class OpenAIProviderOrchestrator implements AIProvider {
+  private sanitizeBotReply(text: string): string {
+    return text
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private buildUserStateSummary(bookingState: BookingState): string {
     const createStatus = `
       aiStatus=${bookingState.aiStatus}
@@ -71,8 +72,9 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     systemPrompt: string;
     userPrompt: string;
     zodFormatResponse: any;
+    systemTools: any[];
   }): Promise<OpenAIParsedResponseType> {
-    const { systemPrompt, userPrompt, zodFormatResponse } = params;
+    const { systemPrompt, systemTools, userPrompt, zodFormatResponse } = params;
 
     return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
@@ -83,7 +85,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      tools: OPEN_AI_TOOLS as any,
+      tools: systemTools as any,
       text: { format: zodFormatResponse },
     });
   }
@@ -92,8 +94,10 @@ export class OpenAIProviderOrchestrator implements AIProvider {
     previousResponseId: string;
     toolOutputs: any[];
     zodFormatResponse: any;
+    systemTools: any[];
   }): Promise<OpenAIParsedResponseType> {
-    const { previousResponseId, toolOutputs, zodFormatResponse } = params;
+    const { previousResponseId, toolOutputs, zodFormatResponse, systemTools } =
+      params;
 
     return await openAIClient.responses.parse({
       model: env.OPENAI_MODEL,
@@ -102,11 +106,12 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       max_output_tokens: env.OPENAI_MAX_TOKENS,
       previous_response_id: previousResponseId,
       input: [...toolOutputs],
+      tools: systemTools as any,
       text: { format: zodFormatResponse },
     });
   }
 
-  private async runAndExecuteIATools(params: {
+  private async runAndExecuteAITools(params: {
     aiRequest: AIRequest;
     aiResponse: OpenAIParsedResponseType;
   }): Promise<{
@@ -126,172 +131,37 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       aiResponse.output_parsed as Partial<BookingState>
     );
     let toolsResponse = aiResponse;
-    let zodFormatResponse;
 
     for (let i = 0; i < 5; i++) {
       const calls = getFunctionCalls(toolsResponse);
       if (!calls.length) break;
 
+      let zodFormatResponse = null;
       const toolOutputs: any[] = [];
+      const toolCallHandlers = [
+        new GetAvailabilityHandler(),
+        new CreateAppointmentHandler(),
+        new CancelAppointmentHandler(),
+      ];
 
       for (const call of calls) {
         const name = call.name;
-        const args = call.arguments ? JSON.parse(call.arguments) : {};
+        const handler = toolCallHandlers.find((h) => h.canHandle(name));
 
-        if (name === 'getAvailability') {
-          const missingParams: string[] = [];
-          if (!args.preferredDate) missingParams.push('preferredDate');
-          if (!args.petName) missingParams.push('petName');
-          if (!args.petSize) missingParams.push('petSize');
-          if (!args.petBreed) missingParams.push('petBreed');
-          if (!args.notes) missingParams.push('notes');
-          if (!args.servicesName) missingParams.push('servicesName');
-
-          if (missingParams.length > 0) {
-            const missingError = ErrorCodes.MISSING_REQUIRED_PARAMETERS;
-
-            throw new Error(missingError.code, {
-              cause: {
-                statusCode: missingError.statusCode,
-                errorReason: `${missingError.message}: [${missingParams.join(', ')}]`,
-              },
-            });
-          }
-
-          const availability = await schedulerService.getAvailibility({
-            day: normalizeDayInLimaISO(args.preferredDate),
-            preferredTime: args.preferredTime,
-            servicesName: args.servicesName,
-            petSize: args.petSize,
+        if (handler) {
+          const result = await handler.handle(call, {
+            schedulerService,
+            currentState: statePatch,
+            userName,
+            userPhoneNumber,
           });
+          statePatch = { ...result.nextState };
+          zodFormatResponse = result.zodFormatResponse;
 
-          if (!availability.success) {
-            throw new Error(availability.errorCode, {
-              cause: {
-                statusCode: availability.statusCode,
-                errorReason: availability.errorReason,
-              },
-            });
-          }
-
-          const appointment = availability.appointment;
-          statePatch = patchBookingState(statePatch, {
-            aiStatus: FlowAIStatus.RUNNING,
-            preferredDate: normalizeDateInLimaISO(appointment?.appointmentDay!),
-            preferredTime: `${appointment?.suggestedStart} - ${appointment?.suggestedEnd}`,
-          });
-
-          zodFormatResponse = zodTextFormat(
-            AI_CREATE_TOOL_AVAILABILITY_RESPONSE_SCHEMA,
-            'booking_state'
-          );
           toolOutputs.push({
             type: 'function_call_output',
             call_id: call.call_id,
-            output: JSON.stringify(appointment),
-          });
-        }
-
-        if (name === 'createAppointment') {
-          const safeServices = await schedulerService.getServicesIdByNames(
-            statePatch.servicesName || []
-          );
-
-          if (!safeServices.success) {
-            throw new Error(safeServices.errorCode, {
-              cause: {
-                statusCode: safeServices.statusCode,
-                errorReason: safeServices.errorReason,
-              },
-            });
-          }
-
-          const serviceIds = safeServices.serviceIds;
-          const appointmentCreated = await schedulerService.createAppointment({
-            day: normalizeDayInLima(statePatch.preferredDate!),
-            startTime: statePatch.preferredTime!.split('-')[0].trim(),
-            endTime: statePatch.preferredTime!.split('-')[1].trim(),
-            ownerName: userName,
-            ownerPhone: userPhoneNumber,
-            petName: statePatch.petName!,
-            petSize: statePatch.petSize!,
-            petBreed: statePatch.petBreed!,
-            notes: statePatch.notes!,
-            serviceIds: serviceIds!,
-          });
-
-          if (!appointmentCreated.success) {
-            throw new Error(appointmentCreated.errorCode, {
-              cause: {
-                statusCode: appointmentCreated.statusCode,
-                errorReason: appointmentCreated.errorReason,
-              },
-            });
-          }
-
-          const appointmentDetails = appointmentCreated.appointment;
-          statePatch = patchBookingState(statePatch, {
-            aiStatus: FlowAIStatus.DONE,
-            preferredDate: '',
-            preferredTime: '',
-            petName: '',
-            petSize: null as unknown as BookingState['petSize'],
-            petBreed: '',
-            notes: '',
-            servicesName: [],
-          });
-
-          zodFormatResponse = zodTextFormat(
-            AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA,
-            'booking_state'
-          );
-          toolOutputs.push({
-            type: 'function_call_output',
-            call_id: call.call_id,
-            output: JSON.stringify(appointmentDetails),
-          });
-        }
-
-        if (name === 'cancelAppointment') {
-          if (!args.appointmentId) {
-            const missingError = ErrorCodes.MISSING_REQUIRED_PARAMETERS;
-
-            throw new Error(missingError.code, {
-              cause: {
-                statusCode: missingError.statusCode,
-                errorReason: `${missingError.message}: [appointmentId]`,
-              },
-            });
-          }
-
-          const appointmentCancelled = await schedulerService.cancelAppointment(
-            args.appointmentId,
-            args.cancelledReason || 'Sin motivo especificado'
-          );
-
-          if (!appointmentCancelled.success) {
-            throw new Error(appointmentCancelled.errorCode, {
-              cause: {
-                statusCode: appointmentCancelled.statusCode,
-                errorReason: appointmentCancelled.errorReason,
-              },
-            });
-          }
-
-          statePatch = patchBookingState(statePatch, {
-            aiStatus: FlowAIStatus.DONE,
-            appointmentId: '',
-            cancelledReason: '',
-          });
-
-          zodFormatResponse = zodTextFormat(
-            AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA,
-            'booking_state'
-          );
-          toolOutputs.push({
-            type: 'function_call_output',
-            call_id: call.call_id,
-            output: JSON.stringify(appointmentCancelled),
+            output: result.toolOutput,
           });
         }
       }
@@ -300,6 +170,10 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         previousResponseId: toolsResponse.id,
         toolOutputs,
         zodFormatResponse,
+        systemTools: getSystemTools({
+          userIntent: bookingState.mode,
+          aiStatus: bookingState.aiStatus,
+        }),
       });
     }
 
@@ -316,7 +190,11 @@ export class OpenAIProviderOrchestrator implements AIProvider {
       validReply(aiResponse?.botReply) &&
       validReply(aiResponse?.aiStatus)
     ) {
-      return aiResponse;
+      const cleanedReply = this.sanitizeBotReply(aiResponse.botReply);
+      return {
+        ...aiResponse,
+        botReply: cleanedReply,
+      };
     }
 
     throw new Error(ErrorCodes.AI_RESPONSE_PARSING_FAILED.code, {
@@ -341,15 +219,17 @@ export class OpenAIProviderOrchestrator implements AIProvider {
 
       const schemaResponse = getAISchemaResponse(systemConstruct);
       const systemPrompt = getSystemPrompt(systemConstruct);
+      const systemTools = getSystemTools(systemConstruct);
       const userPrompt = getUserPrompt(userConstruct);
 
       const initialAIResponse = await this.createAIResponse({
         systemPrompt,
         userPrompt,
         zodFormatResponse: zodTextFormat(schemaResponse, 'booking_state'),
+        systemTools,
       });
 
-      const { toolsResponse, statePatch } = await this.runAndExecuteIATools({
+      const { toolsResponse, statePatch } = await this.runAndExecuteAITools({
         aiRequest: params,
         aiResponse: initialAIResponse,
       });
@@ -367,7 +247,7 @@ export class OpenAIProviderOrchestrator implements AIProvider {
         return {
           requestId: '',
           aiResponse: null,
-          statePatch: {},
+          statePatch: error.cause?.nextState ?? {},
           statusCode: error.cause.statusCode,
           errorCode: error.message,
           errorReason: error.cause.errorReason,

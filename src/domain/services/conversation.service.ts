@@ -1,3 +1,11 @@
+import type { AIProvider } from '@domain/models/ai-provider.model';
+import type { Scheduler } from '@domain/models/scheduler.model';
+import type {
+  HandleChatTurnRequest,
+  HandleChatTurnResponse,
+  ManageAppointmentRequest,
+  ManageAppointmentResponse,
+} from '@domain/models/conversation.model';
 import {
   BookingState,
   BookingStore,
@@ -5,14 +13,14 @@ import {
   FlowAIStatus,
   FlowModeStatus,
 } from '@domain/models/booking-store.model';
-import type { AIProvider } from '@domain/models/ai-provider.model';
-import type { Scheduler } from '@domain/models/scheduler.model';
 import { InteractionOption } from '@domain/enums/interaction-option.enum';
+import { AppointmentStatus } from '@domain/enums/appointment-status.enum';
 import { calculateBookingExpiration } from '@shared/utils/state.util';
 import {
-  type ChatTurnResponse,
-  ChatTurnStrategy,
-} from './chat-turn-strategies/chat-turn.strategy';
+  ACCEPTED_APPOINTMENT_MESSAGE,
+  REJECTED_APPOINTMENT_MESSAGE,
+} from '@shared/symbols/conversation.contants';
+import { createChatTurnStrategy } from './chat-turn-strategies/chat-turn.factory';
 
 export class ConversationService {
   constructor(
@@ -63,13 +71,9 @@ export class ConversationService {
     return { userIntent, nextState };
   }
 
-  async handleChatTurn(params: {
-    conversationId: string;
-    userName: string;
-    userPhoneNumber: string;
-    userMessage: string;
-    userSelectionId?: InteractionOption;
-  }): Promise<ChatTurnResponse> {
+  async handleChatTurn(
+    params: HandleChatTurnRequest
+  ): Promise<HandleChatTurnResponse> {
     const prevState = await this.bookingStoreService.get(params.conversationId);
     const state = prevState
       ? { ...prevState }
@@ -81,7 +85,7 @@ export class ConversationService {
       userSelectionId: params.userSelectionId,
     });
 
-    const chatStrategy = ChatTurnStrategy.handleFlowMode(userIntent, {
+    const chatStrategy = createChatTurnStrategy(userIntent, {
       bookingStoreService: this.bookingStoreService,
       aiProvider: this.aiProvider,
       schedulerService: this.schedulerService,
@@ -94,5 +98,34 @@ export class ConversationService {
         message: params.userMessage,
       },
     });
+  }
+
+  async rejectOrAcceptAppointment(
+    params: ManageAppointmentRequest
+  ): Promise<ManageAppointmentResponse> {
+    const { appointmentId, doctorChoice } = params;
+
+    const appointmentStatus =
+      await this.schedulerService.updateAppointmentStatus(
+        appointmentId,
+        doctorChoice
+      );
+
+    if (appointmentStatus.success) {
+      const botReplyByStatus: Partial<Record<AppointmentStatus, string>> = {
+        [AppointmentStatus.CONFIRMED]: ACCEPTED_APPOINTMENT_MESSAGE,
+        [AppointmentStatus.REJECTED]: REJECTED_APPOINTMENT_MESSAGE,
+      };
+
+      return {
+        statusCode: 200,
+        botReply: botReplyByStatus[doctorChoice] ?? '',
+      };
+    }
+    return {
+      botReply: '',
+      statusCode: appointmentStatus.statusCode,
+      reason: appointmentStatus.errorReason,
+    };
   }
 }
