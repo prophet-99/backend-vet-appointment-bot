@@ -1,11 +1,17 @@
 import type { Request, Response } from 'express';
 
+import { env } from '@config/env';
 import { ConversationOrchestrator } from '@infraestructure/orchestators/conversation.orchestrator';
 import { adaptN8nWhatsappToConversationInput } from '@infraestructure/adapters/n8n-whatsapp.adapter';
 import { adaptWebClientToUpdateStatusInput } from '@infraestructure/adapters/web-client.adapter';
 
 export class ConversationController {
   constructor(private conversationOrch: ConversationOrchestrator) {}
+
+  private hasValidN8nToken(req: Request): boolean {
+    const token = req.header('x-n8n-token');
+    return token === env.N8N_SINGLE_USE_TOKEN;
+  }
 
   private isErrorWithStatusCode(
     err: unknown
@@ -20,6 +26,12 @@ export class ConversationController {
 
   async sendMessageToWhatsApp(req: Request, res: Response) {
     try {
+      if (!this.hasValidN8nToken(req)) {
+        return res.status(401).json({
+          reason: 'Unauthorized',
+        });
+      }
+
       const waConversations = adaptN8nWhatsappToConversationInput(req.body);
       const chatResponse = waConversations.map(
         async ({
