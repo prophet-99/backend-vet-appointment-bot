@@ -8,12 +8,12 @@ import { AI_CREATE_TOOL_BOOKING_RESPONSE_SCHEMA } from '@domain/models/ai-schema
 import { normalizeDayInLima } from '@shared/utils/date.util';
 import { patchBookingState } from '@shared/utils/state.util';
 import {
-  TollCallHandler,
+  ToolCallHandler,
   type ToolCallContext,
   type ToolCallResult,
-} from './toll-call.handler';
+} from './tool-call.handler';
 
-export class CreateAppointmentHandler extends TollCallHandler {
+export class CreateAppointmentHandler extends ToolCallHandler {
   canHandle(name: string): boolean {
     return name === 'createAppointment';
   }

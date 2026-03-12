@@ -5,12 +5,12 @@ import { AI_CANCEL_TOOL_CANCELLATION_RESPONSE_SCHEMA } from '@domain/models/ai-s
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { patchBookingState } from '@shared/utils/state.util';
 import {
-  TollCallHandler,
+  ToolCallHandler,
   type ToolCallContext,
   type ToolCallResult,
-} from './toll-call.handler';
+} from './tool-call.handler';
 
-export class CancelAppointmentHandler extends TollCallHandler {
+export class CancelAppointmentHandler extends ToolCallHandler {
   canHandle(name: string): boolean {
     return name === 'cancelAppointment';
   }

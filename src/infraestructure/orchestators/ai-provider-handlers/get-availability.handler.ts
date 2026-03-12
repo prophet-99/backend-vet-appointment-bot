@@ -9,12 +9,12 @@ import {
 } from '@shared/utils/date.util';
 import { patchBookingState } from '@shared/utils/state.util';
 import {
-  TollCallHandler,
+  ToolCallHandler,
   type ToolCallContext,
   type ToolCallResult,
-} from './toll-call.handler';
+} from './tool-call.handler';
 
-export class GetAvailabilityHandler extends TollCallHandler {
+export class GetAvailabilityHandler extends ToolCallHandler {
   canHandle(name: string): boolean {
     return name === 'getAvailability';
   }
