@@ -4,7 +4,7 @@ import { prismaClient } from '@infraestructure/db/prisma';
 import { AppointmentStatusAdapter } from '@infraestructure/adapters/appointment-status.adapter';
 import { ClosureStatusDto } from '@domain/dtos/scheduler.dto';
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
-import { nowInLima } from '@shared/utils/date.util';
+import { getUtcDayRange, nowInLima } from '@shared/utils/date.util';
 import { generateAppointmentId } from '@shared/utils/appointment-id.util';
 
 export class SchedulerRepository {
@@ -223,9 +223,14 @@ export class SchedulerRepository {
     });
   }
 
-  async getAppointmentsByDate(day: Date) {
+  async getAppointmentsByDate(dayStartUtc: Date, nextDayStartUtc: Date) {
     return prismaClient.appointment.findMany({
-      where: { date: day },
+      where: {
+        date: {
+          gte: dayStartUtc,
+          lt: nextDayStartUtc,
+        },
+      },
       include: {
         items: {
           include: {

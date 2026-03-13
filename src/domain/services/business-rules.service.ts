@@ -7,6 +7,7 @@ import { BusinessRulesRepository } from '@infraestructure/db/repositories/busine
 import { ErrorCodes } from '@shared/symbols/error-codes.constants';
 import { SuccessMessages } from '@shared/symbols/success.constants';
 import {
+  getUtcDayRange,
   normalizeDateInLimaISO,
   normalizeDayInLima,
 } from '@shared/utils/date.util';
@@ -68,8 +69,11 @@ export class BusinessRulesService implements BusinessRules {
     }
 
     try {
-      const { deleted } =
-        await this.businessRulesRepository.removeClosureDay(closureDay);
+      const { dayStartUtc, nextDayStartUtc } = getUtcDayRange(closureDay);
+      const { deleted } = await this.businessRulesRepository.removeClosureDay(
+        dayStartUtc,
+        nextDayStartUtc
+      );
 
       if (!deleted) {
         return {

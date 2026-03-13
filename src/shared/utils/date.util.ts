@@ -54,6 +54,22 @@ export const startOfDay = (d: Date): Date => {
 };
 
 /**
+ * Returns UTC day boundaries [start, nextStart) for a given date.
+ */
+export const getUtcDayRange = (
+  date: Date
+): { dayStartUtc: Date; nextDayStartUtc: Date } => {
+  const dayStartUtc = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+  const nextDayStartUtc = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1)
+  );
+
+  return { dayStartUtc, nextDayStartUtc };
+};
+
+/**
  * Gets the current date/time as a Date object, accounting for Lima timezone
  * Use this for business logic that depends on "now" in Lima timezone
  * NOTE: The Date object stores UTC internally, but represents the current moment in Lima time

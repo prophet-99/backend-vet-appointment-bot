@@ -31,9 +31,14 @@ export class BusinessRulesRepository {
     });
   }
 
-  async removeClosureDay(closureDay: Date) {
+  async removeClosureDay(dayStartUtc: Date, nextDayStartUtc: Date) {
     const { count } = await prismaClient.closure.deleteMany({
-      where: { date: closureDay },
+      where: {
+        date: {
+          gte: dayStartUtc,
+          lt: nextDayStartUtc,
+        },
+      },
     });
 
     return { deleted: count > 0 };

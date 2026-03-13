@@ -29,6 +29,7 @@ import {
 import {
   addDays,
   dayOfWeekMonToSat,
+  getUtcDayRange,
   normalizeDateInLimaISO,
   nowInLima,
   startOfDay,
@@ -377,8 +378,12 @@ export class SchedulerService implements Scheduler {
     date: Date
   ): Promise<GetAppointmentsByDateOutput> {
     try {
+      const { dayStartUtc, nextDayStartUtc } = getUtcDayRange(date);
       const dbAppointments =
-        await this.schedulerRepository.getAppointmentsByDate(date);
+        await this.schedulerRepository.getAppointmentsByDate(
+          dayStartUtc,
+          nextDayStartUtc
+        );
 
       if (dbAppointments.length === 0) {
         return {
@@ -419,6 +424,7 @@ export class SchedulerService implements Scheduler {
         },
       };
     } catch (error: any) {
+      console.log(error);
       return {
         success: false,
         statusCode: ErrorCodes.GET_APPOINTMENTS_FAILED.statusCode,
