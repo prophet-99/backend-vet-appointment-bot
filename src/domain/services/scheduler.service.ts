@@ -377,10 +377,10 @@ export class SchedulerService implements Scheduler {
     date: Date
   ): Promise<GetAppointmentsByDateOutput> {
     try {
-      const appointments =
+      const dbAppointments =
         await this.schedulerRepository.getAppointmentsByDate(date);
 
-      if (appointments.length === 0) {
+      if (dbAppointments.length === 0) {
         return {
           success: false,
           statusCode: ErrorCodes.APPOINTMENTS_BY_DATE_NOT_FOUND.statusCode,
@@ -389,30 +389,34 @@ export class SchedulerService implements Scheduler {
         };
       }
 
-      const appointmentDate = (apt: any) =>
-        DateTime.fromJSDate(apt.date, {
+      const appointments = dbAppointments.map((apt) => {
+        const appointmentDate = DateTime.fromJSDate(apt.date, {
           zone: APP_TIMEZONE,
         }).toFormat('yyyy-MM-dd');
-      const servicesName = (apt: any) =>
-        apt.items.map((item: any) => item.service.name);
-      // TODO: mapear a DTO y no exponer directamente el modelo de DB
+        const servicesName = apt.items.map((item) => item.service.name);
+
+        return {
+          appointmentId: apt.id,
+          appointmentDate,
+          appointmentStartTime: apt.startTime,
+          appointmentEndTime: apt.endTime,
+          ownerName: apt.ownerName,
+          ownerPhone: apt.ownerPhone,
+          petName: apt.petName,
+          petSize: apt.petSize,
+          petBreed: apt.petBreed,
+          servicesName,
+          notes: apt.notes,
+          status: apt.status,
+        };
+      });
+
       return {
         success: true,
         statusCode: 200,
-        appointments: appointments.map((appointment) => ({
-          appointmentId: appointment.id,
-          appointmentDate,
-          appointmentStartTime: appointment.startTime,
-          appointmentEndTime: appointment.endTime,
-          ownerName: appointment.ownerName,
-          ownerPhone: appointment.ownerPhone,
-          petName: appointment.petName,
-          petSize: appointment.petSize,
-          petBreed: appointment.petBreed,
-          servicesName: appointment.items.map((item) => item.service.name),
-          notes: appointment.notes,
-          status: appointment.status,
-        })),
+        body: {
+          appointments,
+        },
       };
     } catch (error: any) {
       return {
@@ -438,14 +442,17 @@ export class SchedulerService implements Scheduler {
         };
       }
 
+      const appointmentDate = DateTime.fromJSDate(appointment.date, {
+        zone: APP_TIMEZONE,
+      }).toFormat('yyyy-MM-dd');
+      const servicesName = appointment.items.map((item) => item.service.name);
+
       return {
         success: true,
         statusCode: 200,
         appointment: {
           appointmentId: appointment.id,
-          appointmentDate: DateTime.fromJSDate(appointment.date, {
-            zone: APP_TIMEZONE,
-          }).toFormat('yyyy-MM-dd'),
+          appointmentDate,
           appointmentStartTime: appointment.startTime,
           appointmentEndTime: appointment.endTime,
           ownerName: appointment.ownerName,
@@ -453,7 +460,7 @@ export class SchedulerService implements Scheduler {
           petName: appointment.petName,
           petSize: appointment.petSize,
           petBreed: appointment.petBreed,
-          servicesName: appointment.items.map((item) => item.service.name),
+          servicesName,
           notes: appointment.notes,
           status: appointment.status,
         },

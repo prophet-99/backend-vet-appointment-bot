@@ -98,20 +98,22 @@ export interface GetAppointmentsByDateOutput {
   statusCode: number;
   errorCode?: string;
   errorReason?: string;
-  appointments?: Array<{
-    appointmentId: string;
-    appointmentDate: string; // YYYY-MM-DD
-    appointmentStartTime: string; // HH:MM
-    appointmentEndTime: string; // HH:MM
-    ownerName: string;
-    ownerPhone: string;
-    petName: string;
-    petSize: string;
-    petBreed: string;
-    servicesName: string[];
-    notes: string;
-    status: string;
-  }>;
+  body?: {
+    appointments?: Array<{
+      appointmentId: string;
+      appointmentDate: string; // YYYY-MM-DD
+      appointmentStartTime: string; // HH:MM
+      appointmentEndTime: string; // HH:MM
+      ownerName: string;
+      ownerPhone: string;
+      petName: string;
+      petSize: string;
+      petBreed: string;
+      servicesName: string[];
+      notes: string;
+      status: string;
+    }>;
+  };
 }
 
 // ========== CANCEL APPOINTMENT ==========
@@ -138,6 +140,8 @@ export interface Scheduler {
   ): Promise<CreateAppointmentOutput>;
 
   getServicesIdByNames(names: string[]): Promise<GetServicesIdByNameOutput>;
+
+  getAppointmentsByDate(date: Date): Promise<GetAppointmentsByDateOutput>;
 
   getAppointment(appointmentId: string): Promise<GetAppointmentOutput>;
 

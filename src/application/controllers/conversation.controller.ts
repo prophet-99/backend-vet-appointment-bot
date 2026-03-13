@@ -6,7 +6,11 @@ import { adaptN8nWhatsappToConversationInput } from '@infraestructure/adapters/n
 import { adaptWebClientToUpdateStatusInput } from '@infraestructure/adapters/web-client.adapter';
 
 export class ConversationController {
-  constructor(private conversationOrch: ConversationOrchestrator) {}
+  private conversationOrch: ConversationOrchestrator;
+
+  constructor() {
+    this.conversationOrch = new ConversationOrchestrator();
+  }
 
   private hasValidN8nToken(req: Request): boolean {
     const token = req.header('x-n8n-token');
@@ -69,8 +73,11 @@ export class ConversationController {
       return res.json(responseToUser);
     } catch (err) {
       const hasStatusCode = this.isErrorWithStatusCode(err);
+      const statusCode = hasStatusCode ? err.cause.statusCode : 500;
 
-      return res.status(hasStatusCode ? err.cause.statusCode : 500).json({
+      return res.status(statusCode).json({
+        statusCode,
+        botReply: '',
         reason: hasStatusCode ? err.message : 'Error interno del servidor',
       });
     }
@@ -93,7 +100,7 @@ export class ConversationController {
       return res.status(521).json({
         statusCode: 521,
         botReply: '',
-        reason: (err as Error).message,
+        reason: (err as Error).message || 'Error del servidor',
       });
     }
   }

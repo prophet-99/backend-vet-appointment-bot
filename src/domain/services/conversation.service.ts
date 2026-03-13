@@ -123,8 +123,8 @@ export class ConversationService {
       };
     }
     return {
-      botReply: '',
       statusCode: appointmentStatus.statusCode,
+      botReply: '',
       reason: appointmentStatus.errorReason,
     };
   }

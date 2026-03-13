@@ -72,12 +72,6 @@ export class DeleteStrategy extends ChatTurnStrategy {
 
     if (bookingState.modeStatus === FlowModeStatus.COMPLETED) {
       stateToPatch.lastBotText = MENU_SELECTION_REQUIRED_MESSAGE;
-      // TODO: DELETE THIS COMMENT:
-      /**
-       *! FLUJO DE ERROR - USUARIO NO SELECCIONA UNA OPCIÓN VÁLIDA DEL MENÚ
-       * 1) Se envía a n8n -> el mode: 'DELETE' y statusMode: 'COMPLETED'
-       * 2) n8n responde con el "reply" al WhatsApp al cliente
-       * */
     }
 
     await this.bookingStoreService.upsert(stateToPatch);

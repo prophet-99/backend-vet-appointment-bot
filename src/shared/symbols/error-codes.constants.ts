@@ -68,6 +68,18 @@ export const ErrorCodes = {
     message:
       '🔍 No encontré citas para la fecha solicitada, por favor verifica vuelve a intentarlo.',
   },
+  CLOSURE_DAY_DATE_INVALID: {
+    code: 'CLOSURE_DAY_DATE_INVALID',
+    statusCode: 422,
+    message:
+      '📅 Formato de fecha no valido para día no laborable. Usa: "YYYY-MM-DD".',
+  },
+  CLOSURE_DAY_NOT_FOUND: {
+    code: 'CLOSURE_DAY_NOT_FOUND',
+    statusCode: 404,
+    message:
+      '🔍 No existe un día no laborable registrado para la fecha solicitada.',
+  },
 
   SERVICE_INTERPRETATION_FAILED: {
     code: 'SERVICE_INTERPRETATION_FAILED',
@@ -129,6 +141,18 @@ export const ErrorCodes = {
     statusCode: 500,
     message:
       '⚠️ Error al actualizar el estado de la cita. Inténtalo nuevamente.',
+  },
+  ADD_CLOSURE_DAY_FAILED: {
+    code: 'ADD_CLOSURE_DAY_FAILED',
+    statusCode: 500,
+    message:
+      '⚠️ No se pudo registrar el día no laborable. Inténtalo nuevamente.',
+  },
+  REMOVE_CLOSURE_DAY_FAILED: {
+    code: 'REMOVE_CLOSURE_DAY_FAILED',
+    statusCode: 500,
+    message:
+      '⚠️ No se pudo eliminar el día no laborable. Inténtalo nuevamente.',
   },
 } as const;
 
